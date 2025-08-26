@@ -1,8 +1,8 @@
 MKLROOT = /opt/intel/oneapi/mkl/latest
-
 CXX = g++
 CXXFLAGS = -O3 -m64 -I$(MKLROOT)/include
-LDFLAGS = -L$(MKLROOT)/lib/intel64 -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl
+LDFLAGS = -L$(MKLROOT)/lib/intel64 -Wl,-rpath,$(MKLROOT)/lib/intel64 \
+          -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl
 
 TARGET = main
 

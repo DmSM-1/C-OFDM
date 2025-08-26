@@ -2,6 +2,7 @@
 #include <vector>
 #include <complex>
 #include <math.h>
+#include <utility>
 
 
 enum mod_type {
@@ -14,7 +15,7 @@ enum mod_type {
 
 
 using complex_double = std::complex<double>;
-using comlex_vector = std::pair<std::vector<double>, std::vector<double>>
+using comlex_vector = std::pair<std::vector<double>, std::vector<double>>;
 
 
 // std::vector<complex_double> psk(std::vector<uint8_t> input, double angle, int deg){
@@ -76,8 +77,9 @@ class Modulation{
             switch (modulation)
             {
             case bpsk:
+                vdAdd(len, input.first.data(), input.second.data(), sum.data());
                 for(int i = 0; i < len; ++i)
-                    output[i] = uint8_t(input.first[i]+input.second[i] > 0);
+                    output[i] = uint8_t(sum[i] > 0);
                 break;
             
             default:
