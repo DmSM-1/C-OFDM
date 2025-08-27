@@ -1,0 +1,11 @@
+total_subc    = 64
+free_subc     = 16
+pilots        = 4
+cp_len        = 16
+pr_symp       = 4
+pr_sin_len    = 100
+pr_seed       = 42
+T2sin_len     = 256
+f1            = 17
+f2            = 51
+modType       = QPSK
