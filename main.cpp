@@ -1,11 +1,30 @@
 #include <iostream>
 #include <stdlib.h>
 #include <cstring>
-#include <mkl.h>
 #include "modulation.hpp"
 #include "OFDM.hpp"
 #include <vector>
 #include <chrono>
+#include <fstream>
+#include <random>
+
+
+void write_complex_to_file(const std::string &filename, const complex_vector &data) {
+    std::ofstream fout(filename, std::ios::binary);
+    if (!fout) {
+        throw std::runtime_error("Cannot open file");
+    }
+
+    size_t len = data.size();
+    for (size_t i = 0; i < len; ++i) {
+        double re = data[i].real();
+        double im = data[i].imag();
+        fout.write(reinterpret_cast<const char*>(&re), sizeof(double));
+        fout.write(reinterpret_cast<const char*>(&im), sizeof(double));
+    }
+
+    fout.close();
+}
 
 
 
@@ -27,29 +46,39 @@ long long bench_us(F&& f, int warmup = 5, int iters = 1000) {
 
 
 void print_vector(std::vector<uint8_t>& v){
-    for (int i = 0; i < v.size(); ++i)
-        std::cout<<v[i];
+    for (auto &i : v)
+        std::cout<<i;
     std::cout<<"\n";
 }
 
 
 int main(){
-    const char* SFILE_NAME = "text.txt";
-
-    std::vector<uint8_t> buf(10240);
-    Modulation Mod(qam16);
-    FILE* SFILE = fopen(SFILE_NAME, "r");
     
+    std::vector<uint8_t> buf(10240);
+    
+    // for (auto &i: buf)
+    // i = std::rand()%256;
+    
+    // Modulation Mod(qam256);
+    
+    const char* SFILE_NAME = "text.txt";
+    FILE* SFILE = fopen(SFILE_NAME, "r");
     size_t file_len = fread(buf.data(), 1, buf.size(), SFILE);
+    fclose(SFILE);
 
     OFDM ofdm("config.txt");
+    ofdm.mod(buf);
+    auto res = ofdm.demod();
+    
+    // complex_vector v(ofdm.full_len, 0);
+    // memcpy(v.data(), ofdm.ofdm_buf, v.size()*sizeof(complex_double));
+
+    // write_complex_to_file("data", v);
         
-    auto mod_data = Mod.mod(buf);
-        
-    auto demod_data = Mod.demod(mod_data);
+    // auto demod_data = Mod.demod(mod_data);
 
     // auto avg_us = bench_us([&](){
-    //         auto mod_data = Mod.mod(buf);
+    //         auto inter = Mod.mod(buf);
     //         auto out = Mod.demod(mod_data);
     //         volatile size_t sink = out.size();
     //         (void)sink;
@@ -59,11 +88,11 @@ int main(){
                 
 
         
-        // print_vector(buf);
-        // print_vector(res);
+    print_vector(buf);
+    print_vector(res);
         
-    demod_data.resize(buf.size());
-    std::cout<<(buf==demod_data)<<'\n';
+    // demod_data.resize(buf.size());
+    std::cout<<(buf==res)<<'\n';
 
     return 0;
 }

@@ -1,20 +1,23 @@
-MKLROOT = /opt/intel/oneapi/mkl/latest
 CXX = g++
-CXXFLAGS = -O3 -m64 -I$(MKLROOT)/include
-LDFLAGS = -L$(MKLROOT)/lib/intel64 -Wl,-rpath,$(MKLROOT)/lib/intel64 \
-          -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl
-
+CXXFLAGS = -O3 -m64 -mavx -Wall -I/usr/include
+LDFLAGS = -lfftw3 -lm
+BUILD = build
+SRCS = main.cpp modulation.cpp
+OBJS = $(addprefix $(BUILD)/,$(SRCS:.cpp=.o))
 TARGET = main
 
 .PHONY: all clean
 
-all: $(TARGET)
+all: $(BUILD) $(TARGET)
+
+$(BUILD):
+	mkdir -p $(BUILD)
+
+$(BUILD)/%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(TARGET): $(OBJS)
+	$(CXX) -o $@ $(OBJS) $(LDFLAGS)
 
 clean:
-	rm -rf $(TARGET) *.o
-
-main.o: main.cpp
-	$(CXX) $(CXXFLAGS) -c main.cpp -o main.o
-
-$(TARGET): main.o
-	$(CXX) -o $(TARGET) main.o $(LDFLAGS)
+	rm -rf $(BUILD) $(TARGET)
