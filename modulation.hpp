@@ -19,6 +19,7 @@ enum mod_type {
 
 using complex_double = std::complex<double>;
 using complex_vector = std::vector<std::complex<double>>;
+using bit_vector = std::vector<uint8_t>;
 
 complex_double psk(uint8_t input, double angle, int deg);
 complex_double qam(uint8_t input, int deg);

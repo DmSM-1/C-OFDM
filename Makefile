@@ -2,7 +2,7 @@ CXX = g++
 CXXFLAGS = -O3 -m64 -mavx -Wall -I/usr/include
 LDFLAGS = -lfftw3 -lm
 BUILD = build
-SRCS = main.cpp modulation.cpp
+SRCS = main.cpp modulation.cpp parser.cpp
 OBJS = $(addprefix $(BUILD)/,$(SRCS:.cpp=.o))
 TARGET = main
 

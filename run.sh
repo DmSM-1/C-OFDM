@@ -1,7 +1,7 @@
 #!/bin/bash
 
-rm -f data
+rm -f data.bin
 make clean
 make
 ./main
-# py graph.py
+py graph.py

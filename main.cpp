@@ -7,6 +7,7 @@
 #include <chrono>
 #include <fstream>
 #include <random>
+#include "Frame.hpp"
 
 
 void write_complex_to_file(const std::string &filename, const complex_vector &data) {
@@ -56,43 +57,24 @@ int main(){
     
     std::vector<uint8_t> buf(10240);
     
-    // for (auto &i: buf)
-    // i = std::rand()%256;
-    
-    // Modulation Mod(qam256);
-    
     const char* SFILE_NAME = "text.txt";
     FILE* SFILE = fopen(SFILE_NAME, "r");
-    size_t file_len = fread(buf.data(), 1, buf.size(), SFILE);
+    fread(buf.data(), 1, buf.size(), SFILE);
+    
     fclose(SFILE);
 
-    OFDM ofdm("config.txt");
-    ofdm.mod(buf);
-    auto res = ofdm.demod();
-    
-    // complex_vector v(ofdm.full_len, 0);
-    // memcpy(v.data(), ofdm.ofdm_buf, v.size()*sizeof(complex_double));
+    FRAME_FORM frame("config.txt");
+    buf.resize(frame.usefull_size);
+    frame.write(buf);
 
-    // write_complex_to_file("data", v);
-        
-    // auto demod_data = Mod.demod(mod_data);
-
-    // auto avg_us = bench_us([&](){
-    //         auto inter = Mod.mod(buf);
-    //         auto out = Mod.demod(mod_data);
-    //         volatile size_t sink = out.size();
-    //         (void)sink;
-    //         });
-    //     std::cout << "avg time: " << avg_us << " us\n";
-                
-                
+    write_complex_to_file("data.bin", frame.get());
 
         
-    print_vector(buf);
-    print_vector(res);
+    // print_vector(buf);
+    // print_vector(res);
         
     // demod_data.resize(buf.size());
-    std::cout<<(buf==res)<<'\n';
+    // std::cout<<(buf==res)<<'\n';
 
     return 0;
 }

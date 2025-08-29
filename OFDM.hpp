@@ -152,7 +152,9 @@ public:
             memcpy(data_segments[i], input_pointer, byte_seg_size);
             input_pointer+=seg_size;
         }
+
         
+
     }
     
     std::vector<uint8_t> demod(){

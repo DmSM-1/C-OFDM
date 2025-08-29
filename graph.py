@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-data = np.fromfile('data', dtype=np.float64)
+data = np.fromfile('data.bin', dtype=np.float64)
 complex_data = data[::2] + 1j * data[1::2] 
 
 
