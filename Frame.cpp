@@ -23,7 +23,9 @@ FFT_FORM::FFT_FORM(int fft_size,int num_data_subc,int num_pilot_subc, int num_sy
         reinterpret_cast<fftw_complex*>(FFT_buf.data()),nullptr, 1, fft_size,       
         FFTW_FORWARD, FFTW_MEASURE)),
 
-        restored_buf(num_data_subc*num_symb, 0)
+        restored_buf(num_data_subc*num_symb, 0),
+
+        norm_factor(sqrt(static_cast<double>(fft_size)))
 {
     int num_pilot_subc_2 = num_pilot_subc/2;
     if (FFT_buf.size()){
@@ -54,8 +56,9 @@ void FFT_FORM::write(complex_vector& input){
 
     fftw_execute(backward_plan);
 
+    norm_factor = sqrt(static_cast<double>(fft_size));
     for (auto &x : FFT_buf) {
-        x /= num_data_subc;
+        x /= norm_factor;
     }
 }
 
@@ -84,9 +87,17 @@ void T2SIN_FORM::set(complex_double* buf_ptr){
     buf = buf_ptr;
 
     if (size){
-        buf[f1] = REAL_ONE;
-        buf[f2] = REAL_ONE;
+        buf[f1] = complex_double(0.5,0);
+        buf[f2] = complex_double(0.5,0);
     }
+
+    fftw_plan backward_plan = fftw_plan_many_dft(1,&size,1,
+        reinterpret_cast<fftw_complex*>(buf),nullptr, 1, size,       
+        reinterpret_cast<fftw_complex*>(buf),nullptr, 1, size,       
+        FFTW_BACKWARD, FFTW_ESTIMATE);
+
+    fftw_execute(backward_plan);
+
 }
 
 
@@ -145,7 +156,7 @@ bit_vector OFDM_FORM::read(){
 FRAME_FORM::FRAME_FORM(const std::string& CONFIGNAME)
     :   config(parse_config(CONFIGNAME)),
         t2sin(config),
-        preamble(config, false),
+        preamble(config),
         message(config),
         frame_buf(t2sin.size+preamble.size+message.size, complex_double(0.0, 0.0)),
         usefull_size(message.usefull_size*message.modType/8),
@@ -155,7 +166,7 @@ FRAME_FORM::FRAME_FORM(const std::string& CONFIGNAME)
     t2sin.set(frame_buf.data());
     preamble.set(frame_buf.data()+t2sin.size);
     message.set(frame_buf.data()+t2sin.size+preamble.size);
-    std::cout<<t2sin.size<<' '<<preamble.size<<' '<<message.size<<'\n';
+    // std::cout<<t2sin.size<<' '<<preamble.size<<' '<<message.size<<'\n';
 }
 
 

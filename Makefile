@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -O0 -g -m64 -mavx -Wall -I/usr/include
+CXXFLAGS = -O3 -g -m64 -mavx -Wall -I/usr/include
 LDFLAGS = -lfftw3 -lm
 BUILD = build
 SRCS = main.cpp modulation.cpp parser.cpp Frame.cpp

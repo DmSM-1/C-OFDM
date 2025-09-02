@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <optional>
+#include <random>
 
 
 const complex_double REAL_ONE(1.0, 0.0);
@@ -41,6 +42,8 @@ public:
 
     complex_vector restored_buf;
     
+    double norm_factor;
+
     FFT_FORM(int fft_size,int num_data_subc,int num_pilot_subc, int num_symb);
     void write(complex_vector& input);
     complex_vector& read();
@@ -94,9 +97,39 @@ public:
     int byte_fft_size;
 
     OFDM_FORM(ConfigMap& config, bool data = true);
-    void set(complex_double* buf_ptr);
+    virtual void set(complex_double* buf_ptr);
     void write(bit_vector& input);
     bit_vector read();
+};
+
+
+class PREAMBLE_FORM : public OFDM_FORM{
+
+public:
+    bit_vector preamble;
+    complex_vector mod_preamble;
+
+    PREAMBLE_FORM(ConfigMap& config)
+    :   OFDM_FORM(config, false),
+        preamble(usefull_size*modType/8, 0),
+        mod_preamble(size, complex_double(0,0))
+    {
+        std::mt19937 rng(pr_seed);
+        std::uniform_int_distribution<int> dist(0, 255);
+        for (auto &i : preamble)
+            i = dist(rng);
+    }
+
+    void set(complex_double* buf_ptr){
+        for(int i = 0; i < num_symb; i++){
+            output[i] = buf_ptr + (cp_size+fft_size)*i;
+        }
+        write(preamble);
+        memcpy(mod_preamble.data(), output[0], mod_preamble.size()*sizeof(complex_double));
+    }
+
+
+
 };
 
 
@@ -107,9 +140,9 @@ class FRAME_FORM{
 private:
     ConfigMap config;
 
-    T2SIN_FORM  t2sin;
-    OFDM_FORM   preamble;
-    OFDM_FORM   message;
+    T2SIN_FORM      t2sin;
+    PREAMBLE_FORM   preamble;
+    OFDM_FORM       message;
     
     complex_vector frame_buf;
 
