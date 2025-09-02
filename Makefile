@@ -1,8 +1,8 @@
 CXX = g++
-CXXFLAGS = -O3 -m64 -mavx -Wall -I/usr/include
+CXXFLAGS = -O0 -g -m64 -mavx -Wall -I/usr/include
 LDFLAGS = -lfftw3 -lm
 BUILD = build
-SRCS = main.cpp modulation.cpp parser.cpp
+SRCS = main.cpp modulation.cpp parser.cpp Frame.cpp
 OBJS = $(addprefix $(BUILD)/,$(SRCS:.cpp=.o))
 TARGET = main
 
@@ -17,7 +17,7 @@ $(BUILD)/%.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(TARGET): $(OBJS)
-	$(CXX) -o $@ $(OBJS) $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -o $@ $(OBJS) $(LDFLAGS)
 
 clean:
 	rm -rf $(BUILD) $(TARGET)

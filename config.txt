@@ -1,11 +1,11 @@
-fft_size        = 256
-num_data_subc   = 128
-num_pilot_subc  = 4
-cp_size         = 0
+fft_size        = 1024
+num_data_subc   = 512
+num_pilot_subc  = 128
+cp_size         = 128
 
-num_symb        = 2
+num_symb        = 64
 
-num_pr_symb     = 1
+num_pr_symb     = 64
 pr_sin_len      = 100
 pr_seed         = 42
 

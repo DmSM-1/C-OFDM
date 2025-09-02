@@ -30,7 +30,7 @@ void write_complex_to_file(const std::string &filename, const complex_vector &da
 
 
 template<typename F>
-long long bench_us(F&& f, int warmup = 5, int iters = 1000) {
+long long bench_us(F&& f, int warmup = 5, int iters = 10000) {
     // прогрев (не считаем)
     for (int i = 0; i < warmup; ++i) f();
 
@@ -67,13 +67,29 @@ int main(){
     buf.resize(frame.usefull_size);
     frame.write(buf);
 
+    auto trans = frame.get();
+    // auto res = frame.read(trans.data()); 
+
+    // print_vector(buf);
+    // print_vector(res);
+
+    // long long avg_us = bench_us([&]() {
+    // auto res = frame.read(trans.data()); 
+    // // защита от оптимизаций
+    // volatile auto guard = res.data();
+    // });
+
+    // std::cout<<avg_us<<"\n";
+
+
+
     write_complex_to_file("data.bin", frame.get());
 
         
     // print_vector(buf);
     // print_vector(res);
         
-    // demod_data.resize(buf.size());
+    // res.resize(buf.size());
     // std::cout<<(buf==res)<<'\n';
 
     return 0;
