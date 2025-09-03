@@ -1,6 +1,6 @@
 CXX = g++
 CXXFLAGS = -O3 -g -m64 -mavx -Wall -I/usr/include
-LDFLAGS = -lfftw3 -lm
+LDFLAGS = -lfftw3 -lm -liio
 BUILD = build
 SRCS = main.cpp modulation.cpp parser.cpp Frame.cpp
 OBJS = $(addprefix $(BUILD)/,$(SRCS:.cpp=.o))

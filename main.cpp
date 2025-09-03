@@ -8,6 +8,8 @@
 #include <fstream>
 #include <random>
 #include "Frame.hpp"
+#include "sdr.hpp"
+#include <thread>
 
 
 void write_complex_to_file(const std::string &filename, const complex_vector &data) {
@@ -68,6 +70,7 @@ int main(){
     frame.write(buf);
 
     auto trans = frame.get();
+    auto for_tx = frame.get_int16();
     auto res = frame.read(trans.data()); 
 
     // print_vector(buf);
@@ -91,6 +94,15 @@ int main(){
         
     res.resize(buf.size());
     std::cout<<(buf==res)<<'\n';
+
+    
+    SDR sdr(0, TX, frame.output_size);
+
+    while (true)
+    {
+        sdr.send(for_tx);
+    }
+    
 
     return 0;
 }

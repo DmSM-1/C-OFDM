@@ -125,10 +125,12 @@ private:
     OFDM_FORM       message;
     
     complex_vector frame_buf;
+    complex16_vector frame_int16_buf;
 
 public:
 
     int usefull_size;
+    int output_size;
 
     bit_vector bit_preambple;
 
@@ -138,6 +140,7 @@ public:
     bit_vector read(void* transmitted_data);
 
     complex_vector get();
+    complex16_vector get_int16();
     
 
 };

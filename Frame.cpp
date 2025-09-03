@@ -162,7 +162,9 @@ FRAME_FORM::FRAME_FORM(const std::string& CONFIGNAME)
         preamble(config),
         message(config),
         frame_buf(t2sin.size+preamble.size+message.size, complex_double(0.0, 0.0)),
+        frame_int16_buf(frame_buf.size()),
         usefull_size(message.usefull_size*message.modType/8),
+        output_size(frame_buf.size()),
         bit_preambple(usefull_size, 0)
 {
 
@@ -185,6 +187,16 @@ bit_vector FRAME_FORM::read(void* transmitted_data){
 complex_vector FRAME_FORM::get(){
     return frame_buf;
 }
+
+complex16_vector FRAME_FORM::get_int16(){
+    int len = frame_buf.size();
+    for (int i = 0; i < len; i++){
+        frame_int16_buf[i] = std::complex<int16_t>(frame_buf[i]);
+        frame_int16_buf[i] *= 16;
+    }
+    return frame_int16_buf;
+}
+
 
 
 PREAMBLE_FORM::PREAMBLE_FORM(ConfigMap& config)
