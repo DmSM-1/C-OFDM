@@ -56,7 +56,6 @@ void FFT_FORM::write(complex_vector& input){
 
     fftw_execute(backward_plan);
 
-    norm_factor = sqrt(static_cast<double>(fft_size));
     for (auto &x : FFT_buf) {
         x /= norm_factor;
     }
@@ -65,6 +64,10 @@ void FFT_FORM::write(complex_vector& input){
 
 complex_vector& FFT_FORM::read(){
     fftw_execute(forward_plan);
+
+    for (auto &x : FFT_buf) {
+        x /= norm_factor;
+    }
 
     auto input_ptr = restored_buf.data();
     for(size_t i = 0; i < pilot.size(); i++, input_ptr+=segment_size){
@@ -184,4 +187,23 @@ complex_vector FRAME_FORM::get(){
 }
 
 
+PREAMBLE_FORM::PREAMBLE_FORM(ConfigMap& config)
+:   OFDM_FORM(config, false),
+    preamble(usefull_size*modType/8, 0),
+    mod_preamble(size, complex_double(0,0))
+{
+    std::mt19937 rng(pr_seed);
+    std::uniform_int_distribution<int> dist(0, 255);
+    for (auto &i : preamble)
+        i = dist(rng);
+}
+
+
+void PREAMBLE_FORM::set(complex_double* buf_ptr){
+    for(int i = 0; i < num_symb; i++){
+        output[i] = buf_ptr + (cp_size+fft_size)*i;
+    }
+    write(preamble);
+    memcpy(mod_preamble.data(), output[0], mod_preamble.size()*sizeof(complex_double));
+}
 

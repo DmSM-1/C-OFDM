@@ -109,30 +109,10 @@ public:
     bit_vector preamble;
     complex_vector mod_preamble;
 
-    PREAMBLE_FORM(ConfigMap& config)
-    :   OFDM_FORM(config, false),
-        preamble(usefull_size*modType/8, 0),
-        mod_preamble(size, complex_double(0,0))
-    {
-        std::mt19937 rng(pr_seed);
-        std::uniform_int_distribution<int> dist(0, 255);
-        for (auto &i : preamble)
-            i = dist(rng);
-    }
-
-    void set(complex_double* buf_ptr){
-        for(int i = 0; i < num_symb; i++){
-            output[i] = buf_ptr + (cp_size+fft_size)*i;
-        }
-        write(preamble);
-        memcpy(mod_preamble.data(), output[0], mod_preamble.size()*sizeof(complex_double));
-    }
-
-
+    PREAMBLE_FORM(ConfigMap& config);
+    void set(complex_double* buf_ptr);
 
 };
-
-
 
 
 class FRAME_FORM{

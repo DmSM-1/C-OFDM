@@ -68,7 +68,7 @@ int main(){
     frame.write(buf);
 
     auto trans = frame.get();
-    // auto res = frame.read(trans.data()); 
+    auto res = frame.read(trans.data()); 
 
     // print_vector(buf);
     // print_vector(res);
@@ -86,11 +86,11 @@ int main(){
     write_complex_to_file("data.bin", frame.get());
 
         
-    // print_vector(buf);
-    // print_vector(res);
+    print_vector(buf);
+    print_vector(res);
         
-    // res.resize(buf.size());
-    // std::cout<<(buf==res)<<'\n';
+    res.resize(buf.size());
+    std::cout<<(buf==res)<<'\n';
 
     return 0;
 }
