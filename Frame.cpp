@@ -44,7 +44,6 @@ FFT_FORM::FFT_FORM(int fft_size,int num_data_subc,int num_pilot_subc, int num_sy
 }
 
 
-
 void FFT_FORM::write(complex_vector& input){
     for(auto &i : pilot)
         *i = REAL_ONE;
@@ -171,7 +170,6 @@ FRAME_FORM::FRAME_FORM(const std::string& CONFIGNAME)
     t2sin.set(frame_buf.data());
     preamble.set(frame_buf.data()+t2sin.size);
     message.set(frame_buf.data()+t2sin.size+preamble.size);
-    // std::cout<<t2sin.size<<' '<<preamble.size<<' '<<message.size<<'\n';
 }
 
 
@@ -188,6 +186,7 @@ complex_vector FRAME_FORM::get(){
     return frame_buf;
 }
 
+
 complex16_vector FRAME_FORM::get_int16(){
     int len = frame_buf.size();
     for (int i = 0; i < len; i++){
@@ -196,7 +195,6 @@ complex16_vector FRAME_FORM::get_int16(){
     }
     return frame_int16_buf;
 }
-
 
 
 PREAMBLE_FORM::PREAMBLE_FORM(ConfigMap& config)
