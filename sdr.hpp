@@ -1,5 +1,6 @@
 #include <iio.h>
 #include <stdio.h>
+#include "parcer.hpp"
 
 
 enum iodev { RX, TX };
@@ -23,8 +24,13 @@ struct stream_cfg {
 class SDR{
 
 private:
-    struct iio_device *sdr;
-    struct stream_cfg cfg;
+    ConfigMap config;
+    int16_t mult;
+
+    struct iio_device *tx_sdr;
+    struct iio_device *rx_sdr; 
+    struct stream_cfg tx_cfg;
+    struct stream_cfg rx_cfg;
     struct iio_scan_context *scan_ctx   = nullptr;
     struct iio_context_info **info      = nullptr;
     struct iio_context *sdr_ctx         = nullptr;
@@ -38,23 +44,14 @@ private:
     struct iio_channel *tx0_q = nullptr;
     
     struct iio_buffer  *txbuf = nullptr;
+    struct iio_buffer  *rxbuf = nullptr;
 
     size_t sdr_buffer_capacity;
+    size_t rx_buf_size;
+
 
     void shutdown(void){
-        // printf("* Destroying buffers\n");
-        // if (rxbuf) { iio_buffer_destroy(rxbuf); }
-        // if (txbuf) { iio_buffer_destroy(txbuf); }
 
-        // printf("* Disabling streaming channels\n");
-        // if (rx0_i) { iio_channel_disable(rx0_i); }
-        // if (rx0_q) { iio_channel_disable(rx0_q); }
-        // if (tx0_i) { iio_channel_disable(tx0_i); }
-        // if (tx0_q) { iio_channel_disable(tx0_q); }
-
-        // printf("* Destroying context\n");
-        // if (ctx) { iio_context_destroy(ctx); }
-        // exit(0);
     }
 
     void errchk(int v, const char* what) {
@@ -135,13 +132,22 @@ private:
     }
 
 public:
-    SDR(int device_num, iodev device_type, size_t sdr_buffer_capacity)
-    :   sdr_buffer_capacity(sdr_buffer_capacity)
+    SDR(int device_num, iodev device_type, size_t sdr_buffer_capacity, const std::string& CONFIGNAME)
+    :   config(parse_config(CONFIGNAME)),
+        mult(config["mult"]),
+        sdr_buffer_capacity(sdr_buffer_capacity),
+        rx_buf_size(sdr_buffer_capacity*config["rx_buf_size"])
     {
-        cfg.bw_hz = 2000000;
-        cfg.fs_hz = 5000000;
-        cfg.lo_hz = 2800000000;
-        cfg.rfport = "A";
+
+        tx_cfg.bw_hz = config["bw_hz"];
+        tx_cfg.fs_hz = config["fs_hz"];
+        tx_cfg.lo_hz = config["lo_hz"];
+        tx_cfg.rfport = "A";
+
+        rx_cfg.bw_hz = config["bw_hz"];
+        rx_cfg.fs_hz = config["fs_hz"];
+        rx_cfg.lo_hz = config["lo_hz"];
+        rx_cfg.rfport = "A_BALANCED";
 
         scan_ctx = iio_create_scan_context("usb", 0);
         ssize_t ret =  iio_scan_context_get_info_list(scan_ctx, &info);
@@ -152,15 +158,36 @@ public:
         iio_context_info_list_free(info);
         iio_scan_context_destroy(scan_ctx);
 
-        get_ad9361_stream_dev(device_type, &sdr);
-        cfg_ad9361_streaming_ch(&cfg, TX, 0);
-        get_ad9361_stream_ch(TX, sdr, 0, &tx0_i);
-        get_ad9361_stream_ch(TX, sdr, 1, &tx0_q);
+        get_ad9361_stream_dev(TX, &tx_sdr);
+        cfg_ad9361_streaming_ch(&tx_cfg, TX, 0);
+        get_ad9361_stream_ch(TX, tx_sdr, 0, &tx0_i);
+        get_ad9361_stream_ch(TX, tx_sdr, 1, &tx0_q);
 
         iio_channel_enable(tx0_i);
         iio_channel_enable(tx0_q);
 
-        txbuf = iio_device_create_buffer(sdr, sdr_buffer_capacity, false);
+        txbuf = iio_device_create_buffer(tx_sdr, sdr_buffer_capacity, false);
+
+        get_ad9361_stream_dev(RX, &rx_sdr);
+        cfg_ad9361_streaming_ch(&rx_cfg, RX, 0);
+
+        char hardwaregain[16];
+        snprintf(hardwaregain, 16, "%.6lf dB", (double)config["hardwaregain"]);
+
+        struct iio_device* phy = iio_context_find_device(sdr_ctx, "ad9361-phy");
+        struct iio_channel* phy_voltage0 = iio_device_find_channel(phy, "voltage0", false);
+        iio_channel_enable(phy_voltage0);
+        iio_channel_attr_write(phy_voltage0, "gain_control_mode", "manual");
+        iio_channel_attr_write(phy_voltage0, "hardwaregain", hardwaregain);
+        iio_channel_disable(phy_voltage0);
+
+        get_ad9361_stream_ch(RX, rx_sdr, 0, &rx0_i);
+        get_ad9361_stream_ch(RX, rx_sdr, 1, &rx0_q);
+
+        iio_channel_enable(rx0_i);
+        iio_channel_enable(rx0_q);
+
+        rxbuf = iio_device_create_buffer(rx_sdr, rx_buf_size, false);
     }    
 
 
@@ -173,14 +200,35 @@ public:
         p_inc = iio_buffer_step(txbuf);
 
         for (size_t i = 0; i < sdr_buffer_capacity && p_dat < p_end; i++) {
-            ((int16_t*)p_dat)[0] = buf[i].imag()*1024; // I
-            ((int16_t*)p_dat)[1] = buf[i].real()*1024; // Q
+            ((int16_t*)p_dat)[0] = buf[i].imag()*16;
+            ((int16_t*)p_dat)[1] = buf[i].real()*16;
             p_dat += p_inc;
         }
 
         iio_buffer_push(txbuf);
 
     }
+
+
+void recv(complex16_vector& buf) {
+    buf.resize(rx_buf_size);
+    char *p_dat, *p_end;
+    ptrdiff_t p_inc;
+
+    ssize_t ret = iio_buffer_refill(rxbuf);
+
+    p_dat = (char *) iio_buffer_start(rxbuf);
+    p_end = (char *) iio_buffer_end(rxbuf);
+    p_inc = iio_buffer_step(rxbuf);
+
+    size_t i = 0;
+    while (p_dat < p_end && i < buf.size()) {
+        buf[i] = std::complex<int16_t>(((int16_t*)p_dat)[0], ((int16_t*)p_dat)[1]);
+
+        p_dat += p_inc;
+        i++;
+    }
+}
 
     
 

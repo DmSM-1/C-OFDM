@@ -28,6 +28,22 @@ void write_complex_to_file(const std::string &filename, const complex_vector &da
 }
 
 
+void write_complex_to_file(const std::string &filename, const complex16_vector &data) {
+    std::ofstream fout(filename, std::ios::binary);
+    if (!fout) {
+        throw std::runtime_error("Cannot open file");
+    }
+    size_t len = data.size();
+    for (size_t i = 0; i < len; ++i) {
+        double re = (double)data[i].real();
+        double im = (double)data[i].imag();
+        fout.write(reinterpret_cast<const char*>(&re), sizeof(double));
+        fout.write(reinterpret_cast<const char*>(&im), sizeof(double));
+    }
+    fout.close();
+}
+
+
 template<typename F>
 long long bench_us(F&& f, int warmup = 5, int iters = 10000) {
 
@@ -73,22 +89,28 @@ int main(){
     // print_vector(origin_mes);
     // print_vector(res_mes);
 
-    long long avg_us = bench_us([&]() {
-        frame.write(origin_mes);
-        auto res = frame.read(frame.get().data()); 
-        volatile auto guard = res.data();
-    });
+    // long long avg_us = bench_us([&]() {
+    //     frame.write(origin_mes);
+    //     auto res = frame.read(frame.get().data()); 
+    //     volatile auto guard = res.data();
+    // });
 
-    std::cout<<avg_us<<"\n";
+    // std::cout<<avg_us<<"\n";
 
-    write_complex_to_file("data.bin", frame.get());
+    // write_complex_to_file("data.bin", frame.get_int16());
 
-    ///SDR sdr(0, TX, frame.output_size);
+    SDR sdr(0, TX, frame.output_size, "config.txt");
 
-    //while (true)
-    //{
-    //    sdr.send(tx_data);
-    //}
+    complex16_vector rx_data(frame.output_size);
+    sdr.send(tx_data);
+    sdr.recv(rx_data);
+
+    write_complex_to_file("data.bin", rx_data);
+
+    // std::cout<<frame.output_size;
+    // while (true)
+    // {
+    // }
 
     return 0;
 }

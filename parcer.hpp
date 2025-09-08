@@ -6,6 +6,6 @@
 #include <algorithm>
 #include <stdexcept>
 
-using ConfigMap = std::unordered_map<std::string, int>;
+using ConfigMap = std::unordered_map<std::string, long>;
 
 ConfigMap parse_config(const std::string& filename) ;

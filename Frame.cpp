@@ -190,8 +190,9 @@ complex_vector FRAME_FORM::get(){
 complex16_vector FRAME_FORM::get_int16(){
     int len = frame_buf.size();
     for (int i = 0; i < len; i++){
+        frame_buf[i] *= config["mult"];
         frame_int16_buf[i] = std::complex<int16_t>(frame_buf[i]);
-        frame_int16_buf[i] *= 16;
+        // frame_int16_buf[i] *= 16;
     }
     return frame_int16_buf;
 }

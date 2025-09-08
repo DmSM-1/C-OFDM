@@ -27,7 +27,7 @@ ConfigMap parse_config(const std::string& filename) {
         key.erase(std::remove_if(key.begin(), key.end(), ::isspace), key.end());
         value.erase(std::remove_if(value.begin(), value.end(), ::isspace), value.end());
 
-        cfg[key] = std::stoi(value);
+        cfg[key] = std::stol(value);
     }
     return cfg;
 }
