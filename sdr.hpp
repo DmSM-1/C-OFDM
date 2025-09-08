@@ -132,7 +132,7 @@ private:
     }
 
 public:
-    SDR(int device_num, iodev device_type, size_t sdr_buffer_capacity, const std::string& CONFIGNAME)
+    SDR(int device_num, size_t sdr_buffer_capacity, const std::string& CONFIGNAME)
     :   config(parse_config(CONFIGNAME)),
         mult(config["mult"]),
         sdr_buffer_capacity(sdr_buffer_capacity),

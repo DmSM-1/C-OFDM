@@ -1,7 +1,7 @@
 fft_size        = 64
 num_data_subc   = 48
 num_pilot_subc  = 4
-cp_size         = 128
+cp_size         = 32
 
 num_symb        = 16
 
@@ -9,7 +9,7 @@ num_pr_symb     = 4
 pr_sin_len      = 100
 pr_seed         = 42
 
-T2sin_size      = 1000
+T2sin_size      = 500
 T2_sin_f1       = 17
 T2_sin_f2       = 51
 modType         = 4
@@ -19,4 +19,4 @@ fs_hz           = 20000000
 lo_hz           = 2800000000
 hardwaregain    = 50
 mult            = 100
-rx_buf_size     = 10
+rx_buf_size     = 1

@@ -10,6 +10,9 @@
 #include "Frame.hpp"
 #include "sdr.hpp"
 #include <thread>
+#include <thread>
+#include <unistd.h>
+#include <fcntl.h>
 
 
 void write_complex_to_file(const std::string &filename, const complex_vector &data) {
@@ -25,6 +28,34 @@ void write_complex_to_file(const std::string &filename, const complex_vector &da
         fout.write(reinterpret_cast<const char*>(&im), sizeof(double));
     }
     fout.close();
+}
+
+
+void send_data(const char* pipe, const complex16_vector& buf) {
+    int fd = open(pipe, O_WRONLY | O_NONBLOCK);
+    if (fd < 0) {
+
+        return;
+    }
+
+    for (auto& s : buf) {
+        int16_t data[2];
+        data[0] = s.real();
+        data[1] = s.imag(); 
+
+        ssize_t written = write(fd, data, sizeof(data));
+        if (written < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                // Pipe временно заполнен, пропускаем этот сэмпл
+                continue;
+            } else {
+                perror("write pipe");
+                break;
+            }
+        }
+    }
+
+    close(fd);
 }
 
 
@@ -99,18 +130,19 @@ int main(){
 
     // write_complex_to_file("data.bin", frame.get_int16());
 
-    SDR sdr(0, TX, frame.output_size, "config.txt");
+    SDR tx_sdr(0, frame.output_size, "config.txt");
+    SDR rx_sdr(1, frame.output_size, "config.txt");
 
     complex16_vector rx_data(frame.output_size);
-    sdr.send(tx_data);
-    sdr.recv(rx_data);
+    
+    
+    
+    for (int i = 0; i < 10000; i++){
+        tx_sdr.send(tx_data);
+        rx_sdr.recv(rx_data);
+        send_data("/tmp/row_input", rx_data);
+    }
 
-    write_complex_to_file("data.bin", rx_data);
-
-    // std::cout<<frame.output_size;
-    // while (true)
-    // {
-    // }
 
     return 0;
 }
