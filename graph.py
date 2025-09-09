@@ -1,35 +1,42 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import os
+import os;
 
-PIPE_PATH = '/tmp/row_input'
+# data = np.fromfile('data.bin', dtype=np.float64)
+# complex_data = data[::2] + 1j * data[1::2] 
 
-if not os.path.exists(PIPE_PATH):
-    raise FileNotFoundError(f"{PIPE_PATH} не найден")
+# sin = np.fromfile('sin.bin', dtype=np.float64)
+# sin_data = sin[::2] + 1j * sin[1::2] 
 
-# Настраиваем график
-plt.ion()  # интерактивный режим
-fig, ax = plt.subplots()
-line, = ax.plot([], [])
-ax.set_xlabel('Sample Index')
-ax.set_ylabel('Amplitude')
-ax.set_title('Received Signal')
 
-# Открываем pipe для чтения
-with open(PIPE_PATH, 'rb') as f:
-    for j in range(10000):
-        raw = f.read()  # читаем блок данных (кол-во байт = 2 * 2 * N)
-        if not raw:
-            continue  # ждём данные
-        
-        data = np.frombuffer(raw, dtype=np.int16)
-        if len(data) < 2:
-            continue
-        
-        complex_data = data[::2] + 1j * data[1::2]
 
-        # Обновляем график
-        line.set_data(np.arange(complex_data.size), np.abs(complex_data))
-        ax.relim()
-        ax.autoscale_view()
-        plt.pause(0.01) 
+# plt.plot(np.arange(complex_data.size),np.abs(complex_data))
+# # plt.plot(np.linspace(0,complex_data.size, sin_data.size),np.abs(sin_data)*100000, color='red')
+# # plt.scatter(np.arange(complex_data.size),np.abs(complex_data), s = 9, color='red')
+# # plt.plot(np.abs(np.fft.fftshift(np.fft.fft(complex_data))))
+# plt.show()
+
+# plt.plot(np.abs(np.fft.fftshift(np.fft.fft(complex_data))))
+# plt.show()
+
+
+data = np.fromfile('data.bin', dtype=np.float64)
+complex_data = (data[::2] + 1j * data[1::2])
+
+sin = np.fromfile('sin.bin', dtype=np.float64) 
+sin *= max(np.abs(complex_data))/max(sin)
+
+plt.plot(np.arange(complex_data.size),np.abs(complex_data))
+
+step = 512
+plt.plot(np.arange(0, sin.size*step, step),sin)
+plt.scatter(np.arange(0, sin.size*step, step),sin)
+    
+plt.show()
+
+start = int(np.argmin(sin)*complex_data.size/sin.size)
+start = 7200
+print(start)
+spec = (np.fft.fft(complex_data[start:start+512]))
+plt.plot(np.abs(spec))
+plt.show()

@@ -56,13 +56,74 @@ private:
     ConfigMap& config;
     
 public:
-    complex_double* buf = nullptr;
     int size;
     int f1;
     int f2;
-    
+
+    std::vector<double> detect_mask;
+    complex_vector detect_buf;
+
+    fftw_plan detect_plan;
+
+    complex_double* buf = nullptr;
+
+
     T2SIN_FORM(ConfigMap& config);
     void set(complex_double* buf_ptr);
+
+    std::vector<double> find(complex_vector& signal, double level = 0.01){
+
+        
+        int cycles      = signal.size()/size;
+
+        std::vector<double> res(cycles, 0.0);
+
+        auto signal_ptr = signal.data();
+        auto buf_ptr    = detect_buf.data();
+        
+        double total_energy = 0.0;
+        double sin_energy   = 0.0;
+        double subc_energy  = 0.0;
+        double re           = 0.0;
+        double im           = 0.0;
+        double rel          = 0.0;
+        
+        for(int i = 0; i < cycles; i++, signal_ptr+=size){
+            
+            total_energy    = 0.0;
+            sin_energy      = 0.0;
+            
+            memcpy(buf_ptr, signal_ptr, size*sizeof(complex_double));
+            fftw_execute(detect_plan);
+
+            for (int j = 0; j < size; j++){
+                re = detect_buf[j].real();
+                im = detect_buf[j].imag();
+
+                subc_energy = re*re+im*im;
+
+                total_energy += subc_energy;
+                sin_energy += detect_mask[j]*subc_energy;
+            }
+            
+            if (total_energy == 0)
+                continue;
+            
+            rel = sin_energy/total_energy;
+
+            if (std::isnan(rel))
+                continue;
+
+            res[i] = rel;
+            
+            
+            // if (rel > level){
+            //     return i * size;
+            // }
+        }
+
+        return res;
+    }
 
 };
 
@@ -120,14 +181,16 @@ class FRAME_FORM{
 private:
     ConfigMap config;
 
+public:
     T2SIN_FORM      t2sin;
     PREAMBLE_FORM   preamble;
     OFDM_FORM       message;
-    
-    complex_vector frame_buf;
-    complex16_vector frame_int16_buf;
 
-public:
+    complex_vector tx_frame_buf;
+    complex16_vector tx_frame_int16_buf;
+
+    complex_vector rx_frame_buf;
+    complex16_vector rx_frame_int16_buf;
 
     int usefull_size;
     int output_size;
@@ -141,6 +204,16 @@ public:
 
     complex_vector get();
     complex16_vector get_int16();
+
+    void form_int16_to_double(){
+        int len = rx_frame_buf.size();
+
+        std::transform( rx_frame_int16_buf.begin(), rx_frame_int16_buf.end(),
+                        rx_frame_buf.begin(),[](const std::complex<int16_t>& c){
+                   return std::complex<double>(c.real(), c.imag());
+               });
+        
+    }
     
 
 };

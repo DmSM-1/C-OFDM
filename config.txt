@@ -9,14 +9,16 @@ num_pr_symb     = 4
 pr_sin_len      = 100
 pr_seed         = 42
 
-T2sin_size      = 500
+T2sin_size      = 512
 T2_sin_f1       = 17
 T2_sin_f2       = 51
+smooth          = 10
+
 modType         = 4
 
 bw_hz           = 2000000
-fs_hz           = 20000000
-lo_hz           = 2800000000
+fs_hz           = 5000000
+lo_hz           = 2400000000
 hardwaregain    = 50
-mult            = 100
-rx_buf_size     = 1
+mult            = 300
+rx_buf_size     = 20

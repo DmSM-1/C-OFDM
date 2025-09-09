@@ -211,11 +211,13 @@ public:
 
 
 void recv(complex16_vector& buf) {
+
+    ssize_t ret = iio_buffer_refill(rxbuf);
+
     buf.resize(rx_buf_size);
     char *p_dat, *p_end;
     ptrdiff_t p_inc;
 
-    ssize_t ret = iio_buffer_refill(rxbuf);
 
     p_dat = (char *) iio_buffer_start(rxbuf);
     p_end = (char *) iio_buffer_end(rxbuf);

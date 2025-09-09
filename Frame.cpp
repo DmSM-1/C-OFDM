@@ -81,8 +81,34 @@ T2SIN_FORM::T2SIN_FORM(ConfigMap& config):
     config(config),
     size(config["T2sin_size"]),
     f1(config["T2_sin_f1"]),
-    f2(config["T2_sin_f2"])
-{}
+    f2(config["T2_sin_f2"]),
+    detect_mask(size, 0.0),
+    detect_buf(size, complex_double(0, 0)),
+    detect_plan(fftw_plan_many_dft(
+        1, &size, 1,
+        reinterpret_cast<fftw_complex*>(detect_buf.data()),nullptr, 1, size,
+        reinterpret_cast<fftw_complex*>(detect_buf.data()),nullptr, 1, size,
+        FFTW_FORWARD, FFTW_MEASURE))
+{
+    int a1 = std::max(0, f1 - (int)config["smooth"]);
+    int b1 = std::min(size - 1, f1 + (int)config["smooth"]);
+    int a2 = std::max(0, f2 - (int)config["smooth"]);
+    int b2 = std::min(size - 1, f2 + (int)config["smooth"]);
+
+    int sum = (b1 - a1 + 1) + (b2 - a2 + 1);
+
+    double val = 1.0 / sum;
+
+    for (int i = a1; i <= b1; i++) {
+        detect_mask[i] += val;
+    }
+
+    for (int i = a2; i <= b2; i++) {
+        detect_mask[i] += val;
+    }
+
+
+}
 
 
 void T2SIN_FORM::set(complex_double* buf_ptr){
@@ -160,16 +186,18 @@ FRAME_FORM::FRAME_FORM(const std::string& CONFIGNAME)
         t2sin(config),
         preamble(config),
         message(config),
-        frame_buf(t2sin.size+preamble.size+message.size, complex_double(0.0, 0.0)),
-        frame_int16_buf(frame_buf.size()),
+        tx_frame_buf(t2sin.size+preamble.size+message.size, complex_double(0.0, 0.0)),
+        tx_frame_int16_buf(tx_frame_buf.size()),
+        rx_frame_buf(tx_frame_buf.size()*config["rx_buf_size"], complex_double(0.0, 0.0)),
+        rx_frame_int16_buf(rx_frame_buf.size()),
         usefull_size(message.usefull_size*message.modType/8),
-        output_size(frame_buf.size()),
+        output_size(tx_frame_buf.size()),
         bit_preambple(usefull_size, 0)
 {
 
-    t2sin.set(frame_buf.data());
-    preamble.set(frame_buf.data()+t2sin.size);
-    message.set(frame_buf.data()+t2sin.size+preamble.size);
+    t2sin.set(tx_frame_buf.data());
+    preamble.set(tx_frame_buf.data()+t2sin.size);
+    message.set(tx_frame_buf.data()+t2sin.size+preamble.size);
 }
 
 
@@ -178,23 +206,23 @@ void FRAME_FORM::write(bit_vector& input){
 }
 
 bit_vector FRAME_FORM::read(void* transmitted_data){
-    memcpy(frame_buf.data(), transmitted_data, sizeof(complex_double)*frame_buf.size());
+    memcpy(tx_frame_buf.data(), transmitted_data, sizeof(complex_double)*tx_frame_buf.size());
     return message.read();
 }
 
 complex_vector FRAME_FORM::get(){
-    return frame_buf;
+    return tx_frame_buf;
 }
 
 
 complex16_vector FRAME_FORM::get_int16(){
-    int len = frame_buf.size();
+    int len = tx_frame_buf.size();
     for (int i = 0; i < len; i++){
-        frame_buf[i] *= config["mult"];
-        frame_int16_buf[i] = std::complex<int16_t>(frame_buf[i]);
+        tx_frame_buf[i] *= config["mult"];
+        tx_frame_int16_buf[i] = std::complex<int16_t>(tx_frame_buf[i]);
         // frame_int16_buf[i] *= 16;
     }
-    return frame_int16_buf;
+    return tx_frame_int16_buf;
 }
 
 
