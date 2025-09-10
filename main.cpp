@@ -15,17 +15,18 @@
 #include <fcntl.h>
 
 
-void write_complex_to_file(const std::string &filename, const complex_vector &data) {
+template <typename Type>
+void write_complex_to_file(const std::string &filename, const std::vector<std::complex<Type>> &data) {
     std::ofstream fout(filename, std::ios::binary);
     if (!fout) {
         throw std::runtime_error("Cannot open file");
     }
     size_t len = data.size();
-    for (size_t i = 0; i < len; ++i) {
-        double re = data[i].real();
-        double im = data[i].imag();
-        fout.write(reinterpret_cast<const char*>(&re), sizeof(double));
-        fout.write(reinterpret_cast<const char*>(&im), sizeof(double));
+    for (const auto &c : data) {
+        Type re = c.real();
+        Type im = c.imag();
+        fout.write(reinterpret_cast<const char*>(&re), sizeof(Type));
+        fout.write(reinterpret_cast<const char*>(&im), sizeof(Type));
     }
     fout.close();
 }
@@ -69,20 +70,20 @@ void send_data(const char* pipe, const complex16_vector& buf) {
 }
 
 
-void write_complex_to_file(const std::string &filename, const complex16_vector &data) {
-    std::ofstream fout(filename, std::ios::binary);
-    if (!fout) {
-        throw std::runtime_error("Cannot open file");
-    }
-    size_t len = data.size();
-    for (size_t i = 0; i < len; ++i) {
-        double re = (double)data[i].real();
-        double im = (double)data[i].imag();
-        fout.write(reinterpret_cast<const char*>(&re), sizeof(double));
-        fout.write(reinterpret_cast<const char*>(&im), sizeof(double));
-    }
-    fout.close();
-}
+// void write_complex_to_file(const std::string &filename, const complex16_vector &data) {
+//     std::ofstream fout(filename, std::ios::binary);
+//     if (!fout) {
+//         throw std::runtime_error("Cannot open file");
+//     }
+//     size_t len = data.size();
+//     for (size_t i = 0; i < len; ++i) {
+//         double re = (double)data[i].real();
+//         double im = (double)data[i].imag();
+//         fout.write(reinterpret_cast<const char*>(&re), sizeof(double));
+//         fout.write(reinterpret_cast<const char*>(&im), sizeof(double));
+//     }
+//     fout.close();
+// }
 
 
 template<typename F>
@@ -135,6 +136,8 @@ int main(){
     
     res_mes.resize(origin_mes.size());
     std::cout<<(origin_mes==res_mes)<<'\n';
+
+    write_complex_to_file("tx.bin", tx_data);
     
     // print_vector(origin_mes);
     // print_vector(res_mes);
@@ -152,26 +155,16 @@ int main(){
     SDR tx_sdr(0, frame.output_size, "config.txt");
     SDR rx_sdr(1, frame.output_size, "config.txt");
 
-    
     complex16_vector rx_data(frame.output_size);
     
     tx_sdr.send(tx_data);
     rx_sdr.recv(frame.rx_frame_int16_buf);
         
-    // std::cout<<frame.find_t2sin()<<'\n';
     frame.form_int16_to_double();
     auto sin = frame.t2sin.find(frame.rx_frame_buf);
     
-    write_complex_to_file("data.bin", frame.rx_frame_buf);
-    write_double_to_file("sin.bin", sin);
-    // auto sin = frame.find_t2sin();
-
-    
-    // for (int i = 0; i < 10000; i++){
-    //     tx_sdr.send(tx_data);
-    //     rx_sdr.recv(rx_data);
-    //     // send_data("/tmp/row_input", rx_data);
-    // }
+    write_complex_to_file("c_data.bin", frame.rx_frame_buf);
+    // write_double_to_file("sin.bin", sin);
 
 
     return 0;

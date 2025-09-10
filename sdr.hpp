@@ -200,8 +200,8 @@ public:
         p_inc = iio_buffer_step(txbuf);
 
         for (size_t i = 0; i < sdr_buffer_capacity && p_dat < p_end; i++) {
-            ((int16_t*)p_dat)[0] = buf[i].imag()*16;
-            ((int16_t*)p_dat)[1] = buf[i].real()*16;
+            ((int16_t*)p_dat)[0] = buf[i].real()*16;
+            ((int16_t*)p_dat)[1] = buf[i].imag()*16;
             p_dat += p_inc;
         }
 

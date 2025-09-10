@@ -1,9 +1,9 @@
-fft_size        = 64
-num_data_subc   = 48
+fft_size        = 512
+num_data_subc   = 256
 num_pilot_subc  = 4
 cp_size         = 32
 
-num_symb        = 16
+num_symb        = 4
 
 num_pr_symb     = 4
 pr_sin_len      = 100
@@ -18,7 +18,7 @@ modType         = 4
 
 bw_hz           = 2000000
 fs_hz           = 5000000
-lo_hz           = 2400000000
+lo_hz           = 2800000000
 hardwaregain    = 50
 mult            = 300
-rx_buf_size     = 20
+rx_buf_size     = 3
