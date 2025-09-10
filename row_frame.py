@@ -5,10 +5,13 @@ import os;
 os.system("./run.sh")
 
 
-for i in range(1000):
+for i in range(100):
     os.system("./main")
     frame = np.fromfile('frame.bin', dtype=np.float64)
     frame = frame[::2] + 1j * frame[1::2]
+
+    cor = np.fromfile('preamble_cor.bin', dtype=np.float64)
+    frame /= np.max(np.abs(frame))/np.max(cor)
 
     print("\r"+' '*20, end='')
     print(f"\r{i}", end='')
@@ -16,6 +19,7 @@ for i in range(1000):
 
     plt.clf()
     plt.plot(np.abs(frame))
+    plt.plot(cor)
 
     plt.pause(0.01)
 else:

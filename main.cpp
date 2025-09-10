@@ -147,8 +147,24 @@ int main(){
     // std::cout<<"symbol:"<<frame.t2sin.find_next_symb(frame.rx_frame_buf, 0, 0.02);
     
     auto symb_begin = frame.t2sin.find_next_symb_with_t2sin(frame.rx_frame_buf, 0, 0.02);
+    frame.preamble.find_start_symb_with_preamble(frame.rx_frame_buf, symb_begin, 0.01);
+    // std::cout<<frame.preamble.cor.size()<<" "<<frame.output_size<<"\n";
+
+    volatile double dummy_sink = 0.0;
+
+    auto avg_us = bench_us([&]() {
+        frame.preamble.find_start_symb_with_preamble(frame.rx_frame_buf, symb_begin, 0.01);
+
+        // используем результат, чтобы не выкинуло
+        if (!frame.preamble.cor.empty()) {
+            dummy_sink += frame.preamble.cor[0];
+        }
+    });
+
+    std::cout<<avg_us<<" us"<<"\n";
     
-    write_complex_to_file("frame.bin", frame.rx_frame_buf.begin()+symb_begin, frame.rx_frame_buf.begin()+symb_begin+frame.output_size+frame.t2sin.size);
+    write_complex_to_file("frame.bin", frame.rx_frame_buf.begin()+symb_begin, frame.rx_frame_buf.begin()+symb_begin+frame.output_size);
+    write_double_to_file("preamble_cor.bin", frame.preamble.cor);
 
 
     return 0;

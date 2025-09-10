@@ -197,6 +197,7 @@ FRAME_FORM::FRAME_FORM(const std::string& CONFIGNAME)
 
     t2sin.set(tx_frame_buf.data());
     preamble.set(tx_frame_buf.data()+t2sin.size);
+    preamble.cor.resize(preamble.size+message.size);
     message.set(tx_frame_buf.data()+t2sin.size+preamble.size);
 }
 
@@ -229,7 +230,9 @@ complex16_vector FRAME_FORM::get_int16(){
 PREAMBLE_FORM::PREAMBLE_FORM(ConfigMap& config)
 :   OFDM_FORM(config, false),
     preamble(usefull_size*modType/8, 0),
-    mod_preamble(size, complex_double(0,0))
+    mod_preamble(size, complex_double(0,0)),
+    conjected_sinh_part(pr_sin_len, complex_double(0,0)),
+    cor(size - pr_sin_len, 0.0)
 {
     std::mt19937 rng(pr_seed);
     std::uniform_int_distribution<int> dist(0, 255);
@@ -244,5 +247,49 @@ void PREAMBLE_FORM::set(complex_double* buf_ptr){
     }
     write(preamble);
     memcpy(mod_preamble.data(), output[0], mod_preamble.size()*sizeof(complex_double));
+
+    for (int i = 0; i < pr_sin_len; i++){
+        conjected_sinh_part[i] = std::conj(mod_preamble[i]);
+    }
 }
 
+
+void PREAMBLE_FORM::find_start_symb_with_preamble(complex_vector& input, int start, double level = 0.01){
+
+    std::fill(cor.begin(), cor.end(), 0.0);
+    double norm = 0;
+    double re, im;
+
+    auto input_ptr = input.data()+start;
+
+    for (int i = 0; i < pr_sin_len; i++, input_ptr++){
+        re = input_ptr->real();
+        im = input_ptr->imag();
+        norm += re*re+im*im;
+    }
+
+    input_ptr = input.data()+start;
+
+    int cycles = cor.size();
+    complex_double energy;
+
+    for (int i = 0; i < cycles; i++, input_ptr++){
+        energy = complex_double(0,0);
+
+        if (norm > 1.0){
+            for (int j = 0; j < pr_sin_len; j++)
+                energy += input_ptr[j]*conjected_sinh_part[j];
+            
+            cor[i] = std::abs(energy);
+            cor[i] /= std::sqrt(norm);
+        }
+
+        re = input_ptr[pr_sin_len].real();
+        im = input_ptr[pr_sin_len].imag();
+        norm += re*re+im*im;
+
+        re = input_ptr[0].real();
+        im = input_ptr[0].imag();
+        norm -= re*re+im*im;
+    }
+}
