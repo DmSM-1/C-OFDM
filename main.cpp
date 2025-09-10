@@ -74,6 +74,28 @@ void send_data(const char* pipe, const complex16_vector& buf) {
 }
 
 
+void write_complex_to_pipe(const char* pipe_path,
+                           std::vector<std::complex<double>>::iterator begin,
+                           std::vector<std::complex<double>>::iterator end)
+{
+    // Открываем pipe вручную через open с O_WRONLY | O_NONBLOCK
+    int fd = open(pipe_path, O_WRONLY | O_NONBLOCK);
+    if (fd < 0) throw std::runtime_error("Cannot open pipe");
+
+    for (auto it = begin; it != end; ++it) {
+        double data[2] = { it->real(), it->imag() };
+        ssize_t written = write(fd, data, sizeof(data));
+        if (written < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) continue;
+            else { perror("write"); break; }
+        }
+    }
+
+    close(fd);
+}
+
+
+
 template<typename F>
 long long bench_us(F&& f, int warmup = 5, int iters = 10000) {
 
@@ -100,7 +122,10 @@ void print_vector(std::vector<uint8_t>& v){
 int main(){
     
     FRAME_FORM frame("config.txt");
+    SDR tx_sdr(0, frame.output_size, "config.txt");
+    SDR rx_sdr(1, frame.output_size, "config.txt");
 
+    
     bit_vector origin_mes(frame.usefull_size);
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -109,26 +134,14 @@ int main(){
     for (size_t i = 0; i < origin_mes.size(); i++) {
         origin_mes[i] = dis(gen);
     }
-
-    // const char* SFILE_NAME = "text.txt";
-    // FILE* SFILE = fopen(SFILE_NAME, "r");
-    // fread(origin_mes.data(), 1, origin_mes.size(), SFILE);    
-    // fclose(SFILE);
-
     
     frame.write(origin_mes);
     
     auto mod_data   = frame.get();
     auto tx_data    = frame.get_int16();
 
-    // auto res_mes    = frame.read(mod_data.data()); 
-    // res_mes.resize(origin_mes.size());
-    // std::cout<<(origin_mes==res_mes)<<'\n';
-
     write_complex_to_file("tx.bin", tx_data.begin(), tx_data.end());
         
-    SDR tx_sdr(0, frame.output_size, "config.txt");
-    SDR rx_sdr(1, frame.output_size, "config.txt");
 
     complex16_vector rx_data(frame.output_size);
     
@@ -136,36 +149,13 @@ int main(){
     rx_sdr.recv(frame.rx_frame_int16_buf);
         
     frame.form_int16_to_double();
-
-    
-    // volatile int guard = 0;
-    // auto avg_us = bench_us([&]() {
-    //     guard = frame.t2sin.find_next_symb(frame.rx_frame_buf, 0, 0.02);
-    // });
-    // std::cout << "Average execution time: " << avg_us << " us\n";
-
-    // std::cout<<"symbol:"<<frame.t2sin.find_next_symb(frame.rx_frame_buf, 0, 0.02);
-    
     auto symb_begin = frame.t2sin.find_next_symb_with_t2sin(frame.rx_frame_buf, 0, 0.02);
-    frame.preamble.find_start_symb_with_preamble(frame.rx_frame_buf, symb_begin, 0.01);
-    // std::cout<<frame.preamble.cor.size()<<" "<<frame.output_size<<"\n";
+    auto preamble_begin = frame.preamble.find_start_symb_with_preamble(frame.rx_frame_buf, symb_begin, 5);
+    auto frame_begin = symb_begin+preamble_begin-frame.t2sin.size;
 
-    volatile double dummy_sink = 0.0;
-
-    auto avg_us = bench_us([&]() {
-        frame.preamble.find_start_symb_with_preamble(frame.rx_frame_buf, symb_begin, 0.01);
-
-        // используем результат, чтобы не выкинуло
-        if (!frame.preamble.cor.empty()) {
-            dummy_sink += frame.preamble.cor[0];
-        }
-    });
-
-    std::cout<<avg_us<<" us"<<"\n";
-    
-    write_complex_to_file("frame.bin", frame.rx_frame_buf.begin()+symb_begin, frame.rx_frame_buf.begin()+symb_begin+frame.output_size);
-    write_double_to_file("preamble_cor.bin", frame.preamble.cor);
-
+    memcpy(frame.rx_message_with_preamble_buf.data(),frame.rx_frame_buf.data()+symb_begin+preamble_begin, sizeof(complex_double)*(frame.output_size-frame.t2sin.size));
+    write_complex_to_file("frame.bin", frame.rx_message_with_preamble_buf.begin(), frame.rx_message_with_preamble_buf.end());
+        
 
     return 0;
 }

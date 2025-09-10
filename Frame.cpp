@@ -129,14 +129,14 @@ void T2SIN_FORM::set(complex_double* buf_ptr){
 }
 
 
-OFDM_FORM::OFDM_FORM(ConfigMap& config, bool data)
+OFDM_FORM::OFDM_FORM(ConfigMap& config, bool data, bool with_preamble)
         : config(config),
           data(data),
           fft_size(config["fft_size"]),
           num_data_subc(config["num_data_subc"]),
           num_pilot_subc(config["num_pilot_subc"]),
           cp_size(config["cp_size"]),
-          num_symb((data)?config["num_symb"]:config["num_pr_symb"]),
+          num_symb((with_preamble)?config["num_symb"]+config["num_pr_symb"]:(data)?config["num_symb"]:config["num_pr_symb"]),
           pr_sin_len(config["pr_sin_len"]),
           pr_seed(config["pr_seed"]),
           modType(static_cast<mod_type>(config["modType"])),
@@ -186,10 +186,12 @@ FRAME_FORM::FRAME_FORM(const std::string& CONFIGNAME)
         t2sin(config),
         preamble(config),
         message(config),
+        rx_message_with_preamble(config, true, true),
         tx_frame_buf(t2sin.size+preamble.size+message.size, complex_double(0.0, 0.0)),
         tx_frame_int16_buf(tx_frame_buf.size()),
         rx_frame_buf(tx_frame_buf.size()*config["rx_buf_size"], complex_double(0.0, 0.0)),
         rx_frame_int16_buf(rx_frame_buf.size()),
+        rx_message_with_preamble_buf(tx_frame_buf.size()),
         usefull_size(message.usefull_size*message.modType/8),
         output_size(tx_frame_buf.size()),
         bit_preambple(usefull_size, 0)
@@ -197,8 +199,8 @@ FRAME_FORM::FRAME_FORM(const std::string& CONFIGNAME)
 
     t2sin.set(tx_frame_buf.data());
     preamble.set(tx_frame_buf.data()+t2sin.size);
-    preamble.cor.resize(preamble.size+message.size);
     message.set(tx_frame_buf.data()+t2sin.size+preamble.size);
+    rx_message_with_preamble.set(rx_message_with_preamble_buf.data());
 }
 
 
@@ -232,7 +234,7 @@ PREAMBLE_FORM::PREAMBLE_FORM(ConfigMap& config)
     preamble(usefull_size*modType/8, 0),
     mod_preamble(size, complex_double(0,0)),
     conjected_sinh_part(pr_sin_len, complex_double(0,0)),
-    cor(size - pr_sin_len, 0.0)
+    cor((int)config["T2sin_size"]*2 + pr_sin_len, 0.0)
 {
     std::mt19937 rng(pr_seed);
     std::uniform_int_distribution<int> dist(0, 255);
@@ -254,7 +256,7 @@ void PREAMBLE_FORM::set(complex_double* buf_ptr){
 }
 
 
-void PREAMBLE_FORM::find_start_symb_with_preamble(complex_vector& input, int start, double level = 0.01){
+void PREAMBLE_FORM::find_cor_with_preamble(complex_vector& input, int start, double level = 0.01){
 
     std::fill(cor.begin(), cor.end(), 0.0);
     double norm = 0;
@@ -292,4 +294,47 @@ void PREAMBLE_FORM::find_start_symb_with_preamble(complex_vector& input, int sta
         im = input_ptr[0].imag();
         norm -= re*re+im*im;
     }
+}
+
+
+int PREAMBLE_FORM::find_start_symb_with_preamble(complex_vector& input, int start, double level = 5){
+
+    // std::fill(cor.begin(), cor.end(), 0.0);
+    double norm = 0;
+    double re, im;
+
+    auto input_ptr = input.data()+start;
+
+    for (int i = 0; i < pr_sin_len; i++, input_ptr++){
+        re = input_ptr->real();
+        im = input_ptr->imag();
+        norm += re*re+im*im;
+    }
+
+    input_ptr = input.data()+start;
+
+    int cycles = cor.size();
+    complex_double energy;
+
+    for (int i = 0; i < cycles; i++, input_ptr++){
+        energy = complex_double(0,0);
+
+        if (norm > 1.0){
+            for (int j = 0; j < pr_sin_len; j++)
+                energy += input_ptr[j]*conjected_sinh_part[j];
+            
+            if (std::abs(energy)/std::sqrt(norm) > level)
+                return i;
+        }
+
+        re = input_ptr[pr_sin_len].real();
+        im = input_ptr[pr_sin_len].imag();
+        norm += re*re+im*im;
+
+        re = input_ptr[0].real();
+        im = input_ptr[0].imag();
+        norm -= re*re+im*im;
+    }
+
+    return 0;
 }

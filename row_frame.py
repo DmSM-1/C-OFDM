@@ -10,16 +10,12 @@ for i in range(100):
     frame = np.fromfile('frame.bin', dtype=np.float64)
     frame = frame[::2] + 1j * frame[1::2]
 
-    cor = np.fromfile('preamble_cor.bin', dtype=np.float64)
-    frame /= np.max(np.abs(frame))/np.max(cor)
-
     print("\r"+' '*20, end='')
     print(f"\r{i}", end='')
 
 
     plt.clf()
     plt.plot(np.abs(frame))
-    plt.plot(cor)
 
     plt.pause(0.01)
 else:

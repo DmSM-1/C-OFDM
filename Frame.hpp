@@ -152,7 +152,7 @@ public:
 
     int byte_fft_size;
 
-    OFDM_FORM(ConfigMap& config, bool data = true);
+    OFDM_FORM(ConfigMap& config, bool data = true, bool with_preamble = false);
     virtual void set(complex_double* buf_ptr);
     void write(bit_vector& input);
     bit_vector read();
@@ -170,8 +170,8 @@ public:
     PREAMBLE_FORM(ConfigMap& config);
     void set(complex_double* buf_ptr);
 
-    void find_start_symb_with_preamble(complex_vector& input, int start, double level);
-
+    void find_cor_with_preamble(complex_vector& input, int start, double level);
+    int find_start_symb_with_preamble(complex_vector& input, int start, double level);
 
 };
 
@@ -185,12 +185,14 @@ public:
     T2SIN_FORM      t2sin;
     PREAMBLE_FORM   preamble;
     OFDM_FORM       message;
+    OFDM_FORM       rx_message_with_preamble;
 
     complex_vector tx_frame_buf;
     complex16_vector tx_frame_int16_buf;
 
     complex_vector rx_frame_buf;
     complex16_vector rx_frame_int16_buf;
+    complex_vector rx_message_with_preamble_buf;
 
     int usefull_size;
     int output_size;
