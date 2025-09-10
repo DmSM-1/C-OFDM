@@ -71,7 +71,7 @@ public:
     T2SIN_FORM(ConfigMap& config);
     void set(complex_double* buf_ptr);
 
-    std::vector<double> find(complex_vector& signal, double level = 0.01){
+    std::vector<double> t2sin_corr_vector(complex_vector& signal, double level = 0.01){
 
         
         int cycles      = signal.size()/size;
@@ -123,6 +123,55 @@ public:
         }
 
         return res;
+    }
+
+
+    int find_next_symb_with_t2sin(complex_vector& signal, int start_index, double level = 0.01){
+        
+        int cycles      = signal.size()/size;
+
+        auto signal_ptr = signal.data();
+        auto buf_ptr    = detect_buf.data();
+        
+        double total_energy = 0.0;
+        double sin_energy   = 0.0;
+        double subc_energy  = 0.0;
+        double re           = 0.0;
+        double im           = 0.0;
+        double rel          = 0.0;
+
+        for(int i = 0; i < cycles; i++, signal_ptr+=size){
+
+            total_energy    = 0.0;
+            sin_energy      = 0.0;
+            
+            memcpy(buf_ptr, signal_ptr, size*sizeof(complex_double));
+            fftw_execute(detect_plan);
+
+            for (int j = 0; j < size; j++){
+                re = detect_buf[j].real();
+                im = detect_buf[j].imag();
+
+                subc_energy = re*re+im*im;
+
+                total_energy += subc_energy;
+                sin_energy += detect_mask[j]*subc_energy;
+            }
+            
+            if (total_energy == 0)
+                continue;
+            
+            rel = sin_energy/total_energy;
+
+            if (std::isnan(rel))
+                continue;
+
+            if (rel > level){
+                return i*size;
+            }
+        }
+
+        return -1;
     }
 
 };

@@ -166,7 +166,7 @@ public:
         iio_channel_enable(tx0_i);
         iio_channel_enable(tx0_q);
 
-        txbuf = iio_device_create_buffer(tx_sdr, sdr_buffer_capacity, false);
+        txbuf = iio_device_create_buffer(tx_sdr, sdr_buffer_capacity, config["tx_cycle_buf"]);
 
         get_ad9361_stream_dev(RX, &rx_sdr);
         cfg_ad9361_streaming_ch(&rx_cfg, RX, 0);

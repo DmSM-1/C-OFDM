@@ -13,21 +13,25 @@
 #include <thread>
 #include <unistd.h>
 #include <fcntl.h>
+#include <iterator>
 
 
-template <typename Type>
-void write_complex_to_file(const std::string &filename, const std::vector<std::complex<Type>> &data) {
+template <typename Iter>
+void write_complex_to_file(const std::string &filename, Iter begin, Iter end) {
+    using Type = typename std::iterator_traits<Iter>::value_type::value_type; 
+
     std::ofstream fout(filename, std::ios::binary);
     if (!fout) {
         throw std::runtime_error("Cannot open file");
     }
-    size_t len = data.size();
-    for (const auto &c : data) {
-        Type re = c.real();
-        Type im = c.imag();
+
+    for (auto it = begin; it != end; ++it) {
+        Type re = it->real();
+        Type im = it->imag();
         fout.write(reinterpret_cast<const char*>(&re), sizeof(Type));
         fout.write(reinterpret_cast<const char*>(&im), sizeof(Type));
     }
+
     fout.close();
 }
 
@@ -68,22 +72,6 @@ void send_data(const char* pipe, const complex16_vector& buf) {
 
     close(fd);
 }
-
-
-// void write_complex_to_file(const std::string &filename, const complex16_vector &data) {
-//     std::ofstream fout(filename, std::ios::binary);
-//     if (!fout) {
-//         throw std::runtime_error("Cannot open file");
-//     }
-//     size_t len = data.size();
-//     for (size_t i = 0; i < len; ++i) {
-//         double re = (double)data[i].real();
-//         double im = (double)data[i].imag();
-//         fout.write(reinterpret_cast<const char*>(&re), sizeof(double));
-//         fout.write(reinterpret_cast<const char*>(&im), sizeof(double));
-//     }
-//     fout.close();
-// }
 
 
 template<typename F>
@@ -132,25 +120,12 @@ int main(){
     
     auto mod_data   = frame.get();
     auto tx_data    = frame.get_int16();
-    auto res_mes    = frame.read(mod_data.data()); 
-    
-    res_mes.resize(origin_mes.size());
-    std::cout<<(origin_mes==res_mes)<<'\n';
 
-    write_complex_to_file("tx.bin", tx_data);
-    
-    // print_vector(origin_mes);
-    // print_vector(res_mes);
-    
-    // long long avg_us = bench_us([&]() {
-        //     frame.write(origin_mes);
-        //     auto res = frame.read(frame.get().data()); 
-        //     volatile auto guard = res.data();
-        // });
-        
-        // std::cout<<avg_us<<"\n";
-        
-        // write_complex_to_file("data.bin", frame.get_int16());
+    // auto res_mes    = frame.read(mod_data.data()); 
+    // res_mes.resize(origin_mes.size());
+    // std::cout<<(origin_mes==res_mes)<<'\n';
+
+    write_complex_to_file("tx.bin", tx_data.begin(), tx_data.end());
         
     SDR tx_sdr(0, frame.output_size, "config.txt");
     SDR rx_sdr(1, frame.output_size, "config.txt");
@@ -161,10 +136,19 @@ int main(){
     rx_sdr.recv(frame.rx_frame_int16_buf);
         
     frame.form_int16_to_double();
-    auto sin = frame.t2sin.find(frame.rx_frame_buf);
+
     
-    write_complex_to_file("c_data.bin", frame.rx_frame_buf);
-    // write_double_to_file("sin.bin", sin);
+    // volatile int guard = 0;
+    // auto avg_us = bench_us([&]() {
+    //     guard = frame.t2sin.find_next_symb(frame.rx_frame_buf, 0, 0.02);
+    // });
+    // std::cout << "Average execution time: " << avg_us << " us\n";
+
+    // std::cout<<"symbol:"<<frame.t2sin.find_next_symb(frame.rx_frame_buf, 0, 0.02);
+    
+    auto symb_begin = frame.t2sin.find_next_symb_with_t2sin(frame.rx_frame_buf, 0, 0.02);
+    
+    write_complex_to_file("frame.bin", frame.rx_frame_buf.begin()+symb_begin, frame.rx_frame_buf.begin()+symb_begin+frame.output_size+frame.t2sin.size);
 
 
     return 0;
