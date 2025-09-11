@@ -1,9 +1,13 @@
 CXX = g++
-CXXFLAGS = -O3 -g -m64 -mavx -Wall -I/usr/include
+CXXFLAGS = -O3 -g -m64 -mavx -Wall -I/usr/include -Iconfig -IOFDM
 LDFLAGS = -lfftw3 -lm -liio
 BUILD = build
-SRCS = main.cpp modulation.cpp parser.cpp Frame.cpp
-OBJS = $(addprefix $(BUILD)/,$(SRCS:.cpp=.o))
+
+# исходники (с путями)
+SRCS = main.cpp OFDM/modulation.cpp config/parser.cpp OFDM/Frame.cpp
+# объектники — только имена файлов, всё в build/
+OBJS = $(addprefix $(BUILD)/,$(notdir $(SRCS:.cpp=.o)))
+
 TARGET = main
 
 .PHONY: all clean
@@ -12,6 +16,9 @@ all: $(BUILD) $(TARGET)
 
 $(BUILD):
 	mkdir -p $(BUILD)
+
+# где искать cpp-файлы
+vpath %.cpp . config OFDM
 
 $(BUILD)/%.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@

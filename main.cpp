@@ -1,14 +1,13 @@
 #include <iostream>
 #include <stdlib.h>
 #include <cstring>
-#include "modulation.hpp"
-#include "OFDM.hpp"
+#include "OFDM/modulation.hpp"
 #include <vector>
 #include <chrono>
 #include <fstream>
 #include <random>
-#include "Frame.hpp"
-#include "sdr.hpp"
+#include "OFDM/Frame.hpp"
+#include "sdr/sdr.hpp"
 #include <thread>
 #include <thread>
 #include <unistd.h>
@@ -121,12 +120,14 @@ void print_vector(std::vector<uint8_t>& v){
 
 int main(){
     
-    FRAME_FORM frame("config.txt");
-    SDR tx_sdr(0, frame.output_size, "config.txt");
-    SDR rx_sdr(1, frame.output_size, "config.txt");
+    FRAME_FORM tx_frame("config/config.txt");
+    FRAME_FORM rx_frame("config/config.txt");
+
+    SDR tx_sdr(0, tx_frame.output_size, "config/config.txt");
+    SDR rx_sdr(1, tx_frame.output_size, "config/config.txt");
 
     
-    bit_vector origin_mes(frame.usefull_size);
+    bit_vector origin_mes(tx_frame.usefull_size);
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<int> dis(0, 1);
@@ -135,26 +136,25 @@ int main(){
         origin_mes[i] = dis(gen);
     }
     
-    frame.write(origin_mes);
+    tx_frame.write(origin_mes);
     
-    auto mod_data   = frame.get();
-    auto tx_data    = frame.get_int16();
+    auto mod_data   = tx_frame.get();
+    auto tx_data    = tx_frame.get_int16();
 
-    write_complex_to_file("tx.bin", tx_data.begin(), tx_data.end());
-        
+    write_complex_to_file("tx.bin", tx_data.begin(), tx_data.end());  
 
-    complex16_vector rx_data(frame.output_size);
+    complex16_vector rx_data(tx_frame.output_size);
     
     tx_sdr.send(tx_data);
-    rx_sdr.recv(frame.rx_frame_int16_buf);
-        
-    frame.form_int16_to_double();
-    auto symb_begin = frame.t2sin.find_next_symb_with_t2sin(frame.rx_frame_buf, 0, 0.02);
-    auto preamble_begin = frame.preamble.find_start_symb_with_preamble(frame.rx_frame_buf, symb_begin, 5);
-    auto frame_begin = symb_begin+preamble_begin-frame.t2sin.size;
+    rx_sdr.recv(rx_frame.rx_frame_int16_buf);
 
-    memcpy(frame.rx_message_with_preamble_buf.data(),frame.rx_frame_buf.data()+symb_begin+preamble_begin, sizeof(complex_double)*(frame.output_size-frame.t2sin.size));
-    write_complex_to_file("frame.bin", frame.rx_message_with_preamble_buf.begin(), frame.rx_message_with_preamble_buf.end());
+    rx_frame.form_int16_to_double();
+    auto symb_begin = rx_frame.t2sin.find_next_symb_with_t2sin(rx_frame.rx_frame_buf, 0);
+    auto preamble_begin = rx_frame.preamble.find_start_symb_with_preamble(rx_frame.rx_frame_buf, symb_begin);
+    auto frame_begin = symb_begin+preamble_begin-rx_frame.t2sin.size;
+
+    memcpy(rx_frame.rx_message_with_preamble_buf.data(),rx_frame.rx_frame_buf.data()+symb_begin+preamble_begin, sizeof(complex_double)*(rx_frame.output_size-rx_frame.t2sin.size));
+    write_complex_to_file("data/frame.bin", rx_frame.rx_message_with_preamble_buf.begin(), rx_frame.rx_message_with_preamble_buf.end());
         
 
     return 0;
