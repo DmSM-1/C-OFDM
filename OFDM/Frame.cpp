@@ -141,6 +141,7 @@ OFDM_FORM::OFDM_FORM(ConfigMap& config, bool data, bool with_preamble)
           pr_sin_len(config["pr_sin_len"]),
           pr_seed(config["pr_seed"]),
           modType(static_cast<mod_type>(config["modType"])),
+          ofdm_len(fft_size+cp_size),
           size((fft_size+cp_size)*num_symb),
           usefull_size(num_data_subc*num_symb),
           output(num_symb, nullptr),
@@ -187,12 +188,11 @@ FRAME_FORM::FRAME_FORM(const std::string& CONFIGNAME)
         t2sin(config),
         preamble(config),
         message(config),
-        rx_message_with_preamble(config, true, true),
+        message_with_preamble(config, true, true),
         tx_frame_buf(t2sin.size+preamble.size+message.size, complex_double(0.0, 0.0)),
         tx_frame_int16_buf(tx_frame_buf.size()),
         rx_frame_buf(tx_frame_buf.size()*config["rx_buf_size"], complex_double(0.0, 0.0)),
         rx_frame_int16_buf(rx_frame_buf.size()),
-        rx_message_with_preamble_buf(tx_frame_buf.size()),
         usefull_size(message.usefull_size*message.modType/8),
         output_size(tx_frame_buf.size()),
         bit_preambple(usefull_size, 0)
@@ -201,7 +201,7 @@ FRAME_FORM::FRAME_FORM(const std::string& CONFIGNAME)
     t2sin.set(tx_frame_buf.data());
     preamble.set(tx_frame_buf.data()+t2sin.size);
     message.set(tx_frame_buf.data()+t2sin.size+preamble.size);
-    rx_message_with_preamble.set(rx_message_with_preamble_buf.data());
+    message_with_preamble.set(tx_frame_buf.data()+t2sin.size);
 }
 
 

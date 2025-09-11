@@ -34,6 +34,24 @@ void write_complex_to_file(const std::string &filename, Iter begin, Iter end) {
     fout.close();
 }
 
+template <typename Iter>
+void read_complex_from_file(const std::string &filename, Iter out) {
+    using Type = typename std::iterator_traits<Iter>::value_type::value_type; // тип числа (float, double, ...)
+
+    std::ifstream fin(filename, std::ios::binary);
+    if (!fin) {
+        throw std::runtime_error("Cannot open file");
+    }
+
+    Type re, im;
+    while (fin.read(reinterpret_cast<char*>(&re), sizeof(Type))) {
+        if (!fin.read(reinterpret_cast<char*>(&im), sizeof(Type))) {
+            throw std::runtime_error("File corrupted: incomplete complex number");
+        }
+        *out++ = std::complex<Type>(re, im);
+    }
+}
+
 
 void write_double_to_file(const std::string &filename, const std::vector<double> &data) {
     std::ofstream fout(filename, std::ios::binary);
@@ -73,26 +91,38 @@ void send_data(const char* pipe, const complex16_vector& buf) {
 }
 
 
-void write_complex_to_pipe(const char* pipe_path,
-                           std::vector<std::complex<double>>::iterator begin,
-                           std::vector<std::complex<double>>::iterator end)
-{
-    // Открываем pipe вручную через open с O_WRONLY | O_NONBLOCK
-    int fd = open(pipe_path, O_WRONLY | O_NONBLOCK);
-    if (fd < 0) throw std::runtime_error("Cannot open pipe");
+// void write_complex_to_pipe(const char* pipe_path,
+//                            std::vector<std::complex<double>>::iterator begin,
+//                            std::vector<std::complex<double>>::iterator end)
+// {
+//     // Открываем pipe вручную через open с O_WRONLY | O_NONBLOCK
+//     int fd = open(pipe_path, O_WRONLY | O_NONBLOCK);
+//     if (fd < 0) throw std::runtime_error("Cannot open pipe");
 
-    for (auto it = begin; it != end; ++it) {
-        double data[2] = { it->real(), it->imag() };
-        ssize_t written = write(fd, data, sizeof(data));
-        if (written < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) continue;
-            else { perror("write"); break; }
-        }
+//     for (auto it = begin; it != end; ++it) {
+//         double data[2] = { it->real(), it->imag() };
+//         ssize_t written = write(fd, data, sizeof(data));
+//         if (written < 0) {
+//             if (errno == EAGAIN || errno == EWOULDBLOCK) continue;
+//             else { perror("write"); break; }
+//         }
+//     }
+
+//     close(fd);
+// }
+
+
+template <typename Iter>
+void write_complex_to_pipe(Iter begin, Iter end, const char* pipe_name) {
+    std::ofstream pipe(pipe_name, std::ios::binary);
+    for (Iter it = begin; it != end; ++it) {
+        double re = it->real();
+        double im = it->imag();
+        pipe.write(reinterpret_cast<char*>(&re), sizeof(double));
+        pipe.write(reinterpret_cast<char*>(&im), sizeof(double));
     }
-
-    close(fd);
+    pipe.close();
 }
-
 
 
 template<typename F>
@@ -118,6 +148,7 @@ void print_vector(std::vector<uint8_t>& v){
 }
 
 
+
 int main(){
     
     FRAME_FORM tx_frame("config/config.txt");
@@ -130,8 +161,9 @@ int main(){
     bit_vector origin_mes(tx_frame.usefull_size);
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<int> dis(0, 1);
+    std::uniform_int_distribution<int> dis(0, 255);
 
+    // for (int k = 0; k < 1000; k++){
     for (size_t i = 0; i < origin_mes.size(); i++) {
         origin_mes[i] = dis(gen);
     }
@@ -140,23 +172,49 @@ int main(){
     
     auto mod_data   = tx_frame.get();
     auto tx_data    = tx_frame.get_int16();
+  
 
-    write_complex_to_file("tx.bin", tx_data.begin(), tx_data.end());  
 
-    complex16_vector rx_data(tx_frame.output_size);
     
     tx_sdr.send(tx_data);
     rx_sdr.recv(rx_frame.rx_frame_int16_buf);
+
+    // memcpy(rx_frame.rx_frame_int16_buf.data(), tx_frame.tx_frame_int16_buf.data(), tx_frame.output_size*sizeof(std::complex<int16_t>));
+
+    // rx_frame.form_int16_to_double();
+    // auto symb_begin = rx_frame.t2sin.find_next_symb_with_t2sin(rx_frame.rx_frame_buf, 0);
+    // auto preamble_begin = rx_frame.preamble.find_start_symb_with_preamble(rx_frame.rx_frame_buf, symb_begin);
+    // auto frame_begin = symb_begin+preamble_begin-rx_frame.t2sin.size+1;
+
+    // // std::cout << preamble_begin << "\n";
+    
+    // memcpy(rx_frame.tx_frame_buf.data(), rx_frame.rx_frame_buf.data()+frame_begin, sizeof(complex_double)*(rx_frame.output_size));
+
+    // auto constell = rx_frame.message.fft();
+    // // auto constell = tx_frame.message.fft();
+
+    // write_complex_to_file("data/rx_frame.bin", rx_frame.tx_frame_buf.begin(), rx_frame.tx_frame_buf.end());
+    // write_complex_to_file("data/tx_frame.bin", tx_frame.tx_frame_buf.begin(), tx_frame.tx_frame_buf.end());
+    // write_complex_to_file("data/constell.bin", constell.begin(), constell.end());
+
 
     rx_frame.form_int16_to_double();
     auto symb_begin = rx_frame.t2sin.find_next_symb_with_t2sin(rx_frame.rx_frame_buf, 0);
     auto preamble_begin = rx_frame.preamble.find_start_symb_with_preamble(rx_frame.rx_frame_buf, symb_begin);
     auto frame_begin = symb_begin+preamble_begin-rx_frame.t2sin.size;
 
-    memcpy(rx_frame.rx_message_with_preamble_buf.data(),rx_frame.rx_frame_buf.data()+symb_begin+preamble_begin, sizeof(complex_double)*(rx_frame.output_size-rx_frame.t2sin.size));
-    write_complex_to_file("data/frame.bin", rx_frame.rx_message_with_preamble_buf.begin(), rx_frame.rx_message_with_preamble_buf.end());
-        
+    memcpy(rx_frame.tx_frame_buf.data(), rx_frame.rx_frame_buf.data()+frame_begin, sizeof(complex_double)*(rx_frame.output_size));
+    rx_frame.message_with_preamble.cp_freq_sinh();
+    rx_frame.message_with_preamble.pr_phase_sinh(rx_frame.preamble.mod_preamble.data(), rx_frame.preamble.size);
+    
+    auto constell = rx_frame.message.fft();
 
+    write_complex_to_file("data/frame.bin", rx_frame.tx_frame_buf.begin()+rx_frame.t2sin.size, rx_frame.tx_frame_buf.end());
+    write_complex_to_file("data/constell.bin", constell.begin(), constell.end());
+
+    // write_complex_to_pipe(rx_frame.tx_frame_buf.begin()+rx_frame.t2sin.size, rx_frame.tx_frame_buf.end(), "/tmp/fifo_frame");
+    // write_complex_to_pipe(constell.begin(), constell.end(), "/tmp/fifo_constell");
+    // }
     return 0;
 }
 

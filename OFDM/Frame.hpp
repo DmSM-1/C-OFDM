@@ -143,6 +143,7 @@ public:
     int pr_seed;
     mod_type modType;
 
+    int ofdm_len;
     int size;
     int usefull_size;
 
@@ -158,6 +159,44 @@ public:
     virtual void set(complex_double* buf_ptr);
     void write(bit_vector& input);
     bit_vector read();
+
+    void cp_freq_sinh(){
+        complex_double phase;
+        complex_double step;
+        complex_double shift;
+        for (int i=0; i<size; i+= ofdm_len){
+            phase = complex_double(0);
+            shift = complex_double(1,0);
+            for (int j = 0; j < cp_size; j++){
+                phase += std::conj(output[0][i+j])*output[0][i+j+fft_size];
+            }
+            step = std::exp(-complex_double(0, 1)*(std::arg(phase)/fft_size));
+            for (int j = i; j < size; j++){
+                output[0][j] *= shift;
+                shift *= step;
+            }
+        }
+    }
+
+    void pr_phase_sinh(complex_double* pr, int pr_size){
+        complex_double phase = complex_double(0);
+        for(int i = 0; i < pr_size; i++){
+            phase += std::conj(pr[i])*output[0][i];
+        }
+        phase = std::exp(-complex_double(0, 1)*(std::arg(phase)));
+        for(int i = 0; i < size; i++){
+            output[0][i] *= phase;
+        }
+    }
+
+    complex_vector fft(){
+
+    for(int i = 0, j = 0; i < num_symb; i++, j+=fft_size)
+        memcpy(fft_task.FFT_buf.data()+j, output[i]+cp_size, byte_fft_size);
+
+    return fft_task.read();
+    
+}
 };
 
 
@@ -188,14 +227,13 @@ public:
     T2SIN_FORM      t2sin;
     PREAMBLE_FORM   preamble;
     OFDM_FORM       message;
-    OFDM_FORM       rx_message_with_preamble;
+    OFDM_FORM       message_with_preamble;
 
     complex_vector tx_frame_buf;
     complex16_vector tx_frame_int16_buf;
 
     complex_vector rx_frame_buf;
     complex16_vector rx_frame_int16_buf;
-    complex_vector rx_message_with_preamble_buf;
 
     int usefull_size;
     int output_size;
