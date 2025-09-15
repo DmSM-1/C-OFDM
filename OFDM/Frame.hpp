@@ -253,7 +253,7 @@ public:
     std::vector<int> top_indexes(num_pilot_subc+1);
     for (int i = 0; i <= num_pilot_subc; i++) {
         int seg_start = start + i*pilot_w;
-        if (seg_start >= amp_size) break; // не выходим за границы
+        if (seg_start >= amp_size) break;
         int seg_end = std::min(seg_start + pilot_w, amp_size);
 
         auto max_it = std::max_element(amp_extended.begin() + seg_start, amp_extended.begin() + seg_end);
@@ -314,11 +314,11 @@ public:
     OFDM_FORM       message;
     OFDM_FORM       message_with_preamble;
 
-    complex_vector tx_frame_buf;
-    complex16_vector tx_frame_int16_buf;
+    complex_vector tx_buf;
+    complex16_vector tx_int16_buf;
 
-    complex_vector rx_frame_buf;
-    complex16_vector rx_frame_int16_buf;
+    complex_vector rx_buf;
+    complex16_vector rx_int16_buf;
 
     int usefull_size;
     int output_size;
@@ -334,10 +334,10 @@ public:
     complex16_vector get_int16();
 
     void form_int16_to_double(){
-        int len = rx_frame_buf.size();
+        int len = rx_buf.size();
 
-        std::transform( rx_frame_int16_buf.begin(), rx_frame_int16_buf.end(),
-                        rx_frame_buf.begin(),[](const std::complex<int16_t>& c){
+        std::transform( rx_int16_buf.begin(), rx_int16_buf.end(),
+                        rx_buf.begin(),[](const std::complex<int16_t>& c){
                    return std::complex<double>(c.real(), c.imag());
                });
         

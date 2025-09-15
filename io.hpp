@@ -30,6 +30,25 @@ void write_complex_to_file(const std::string &filename, Iter begin, Iter end) {
     fout.close();
 }
 
+template <typename T>
+void write_complex_to_file(const std::string &filename, const std::vector<std::complex<T>> &data) {
+    using Type = typename std::vector<std::complex<T>>::value_type::value_type; 
+
+    std::ofstream fout(filename, std::ios::binary);
+    if (!fout) {
+        throw std::runtime_error("Cannot open file");
+    }
+
+    for (auto &it : data) {
+        Type re = it.real();
+        Type im = it.imag();
+        fout.write(reinterpret_cast<const char*>(&re), sizeof(Type));
+        fout.write(reinterpret_cast<const char*>(&im), sizeof(Type));
+    }
+
+    fout.close();
+}
+
 template <typename Iter>
 void read_complex_from_file(const std::string &filename, Iter out) {
     using Type = typename std::iterator_traits<Iter>::value_type::value_type; // тип числа (float, double, ...)
