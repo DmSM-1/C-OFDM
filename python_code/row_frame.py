@@ -5,7 +5,7 @@ import os
 os.system("./run.sh")
 
 plt.ion()  # включаем интерактивный режим
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
+fig, (ax3, ax4, ax1, ax2) = plt.subplots(1, 4, figsize=(10, 5))
 
 for i in range(100):
     os.system("./main")
@@ -19,8 +19,13 @@ for i in range(100):
     constell = constell[::2] + 1j * constell[1::2]
     constell /= np.mean(np.abs(constell))
 
-    print("\r" + ' '*20, end='')
-    print(f"\r{i}", end='')
+    data = np.fromfile('data/data.bin', dtype=np.float64)
+    data = data[::2] + 1j * data[1::2]   
+
+    cor = np.fromfile('data/cor.bin', dtype=np.float64)
+
+    # print("\r" + ' '*20, end='')
+    # print(f"\r{i}", end='')
 
     # ---- Отображение ----
     ax1.cla()  # очищаем первый subplot
@@ -35,6 +40,12 @@ for i in range(100):
     ax2.set_ylim(-1.5, 1.5)
     ax2.set_title("Constellation IQ")
     ax2.grid(True)
+
+    ax3.cla()
+    ax3.plot(np.abs(data))
+
+    ax4.cla()
+    ax4.plot(cor)
 
     plt.pause(0.01)
 else:

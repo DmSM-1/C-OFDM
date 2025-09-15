@@ -59,13 +59,27 @@ public:
     int size;
     int f1;
     int f2;
-
+    int smooth;
+    
     double level;
-
+    
     std::vector<double> detect_mask;
     complex_vector detect_buf;
-
+    
     fftw_plan detect_plan;
+    
+    int mean_freq;
+    int min_f1;
+    int max_f1;
+    
+    int min_f2;
+    int max_f2;
+    
+    int real_f1 = 0;
+    int real_f2 = 0;
+    int real_f1_ampl = 0;
+    int real_f2_ampl = 0;
+    double freq_shift = 0;
 
     complex_double* buf = nullptr;
 
@@ -115,6 +129,39 @@ public:
                 continue;
 
             if (rel > level){
+
+                real_f1 = f1;
+                real_f2 = f2;
+                real_f1_ampl = 0;
+                real_f2_ampl = 0;
+                
+                // for (int j = min_f1; j < max_f1; j++){
+                //     re = detect_buf[j].real();
+                //     im = detect_buf[j].imag();
+
+                //     subc_energy = re*re+im*im;
+                //     if (subc_energy < real_f1_ampl)
+                //         continue;
+
+                //     real_f1 = j;
+                //     real_f1_ampl = subc_energy;
+
+                // }
+                // for (int j = min_f2; j < max_f2; j++){
+                //     re = detect_buf[j].real();
+                //     im = detect_buf[j].imag();
+
+                //     subc_energy = re*re+im*im;
+                //     if (subc_energy < real_f2_ampl)
+                //         continue;
+
+                //     real_f2 = j;
+                //     real_f2_ampl = subc_energy;
+
+                // }
+
+                // freq_shift = double(real_f1 + real_f2 - f1 - f2)/2/size;
+
                 return i*size;
             }
         }
@@ -176,6 +223,7 @@ public:
                 shift *= step;
             }
         }
+        std::cout<<"step "<<std::arg(step)<<'\n';
     }
 
     void pr_phase_sinh(complex_double* pr, int pr_size){
@@ -191,12 +239,24 @@ public:
 
     complex_vector fft(){
 
-    for(int i = 0, j = 0; i < num_symb; i++, j+=fft_size)
-        memcpy(fft_task.FFT_buf.data()+j, output[i]+cp_size, byte_fft_size);
+        for(int i = 0, j = 0; i < num_symb; i++, j+=fft_size)
+            memcpy(fft_task.FFT_buf.data()+j, output[i]+cp_size, byte_fft_size);
 
-    return fft_task.read();
+        return fft_task.read();   
+    }
+
+    void freq_shift(double& freq_shift){
+        complex_double step = std::exp(complex_double(0, 1)*freq_shift);
+        complex_double shift = complex_double(1, 0);
+        std::cout<<"step "<<std::arg(step)<<' ';
+        for (int j = 0; j < size; j++){
+            output[0][j] *= shift;
+            shift *= step;
+        }
+    }
+
     
-}
+
 };
 
 

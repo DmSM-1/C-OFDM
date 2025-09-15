@@ -82,6 +82,7 @@ T2SIN_FORM::T2SIN_FORM(ConfigMap& config):
     size(config["T2sin_size"]),
     f1(config["T2_sin_f1"]),
     f2(config["T2_sin_f2"]),
+    smooth(config["smooth"]),
     level((double)config["T2_sin_level"]/1000),
     detect_mask(size, 0.0),
     detect_buf(size, complex_double(0, 0)),
@@ -89,7 +90,13 @@ T2SIN_FORM::T2SIN_FORM(ConfigMap& config):
         1, &size, 1,
         reinterpret_cast<fftw_complex*>(detect_buf.data()),nullptr, 1, size,
         reinterpret_cast<fftw_complex*>(detect_buf.data()),nullptr, 1, size,
-        FFTW_FORWARD, FFTW_MEASURE))
+        FFTW_FORWARD, FFTW_MEASURE)),
+
+    mean_freq((f1+f2)/2),
+    min_f1(std::max(0, f1-smooth)),
+    max_f1(std::max(mean_freq, f1+smooth)),
+    min_f2(std::max(mean_freq, f2-smooth)),
+    max_f2(std::max(size, f2+smooth))
 {
     int a1 = std::max(0, f1 - (int)config["smooth"]);
     int b1 = std::min(size - 1, f1 + (int)config["smooth"]);
