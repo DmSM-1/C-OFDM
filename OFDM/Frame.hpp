@@ -130,38 +130,6 @@ public:
 
             if (rel > level){
 
-                real_f1 = f1;
-                real_f2 = f2;
-                real_f1_ampl = 0;
-                real_f2_ampl = 0;
-                
-                // for (int j = min_f1; j < max_f1; j++){
-                //     re = detect_buf[j].real();
-                //     im = detect_buf[j].imag();
-
-                //     subc_energy = re*re+im*im;
-                //     if (subc_energy < real_f1_ampl)
-                //         continue;
-
-                //     real_f1 = j;
-                //     real_f1_ampl = subc_energy;
-
-                // }
-                // for (int j = min_f2; j < max_f2; j++){
-                //     re = detect_buf[j].real();
-                //     im = detect_buf[j].imag();
-
-                //     subc_energy = re*re+im*im;
-                //     if (subc_energy < real_f2_ampl)
-                //         continue;
-
-                //     real_f2 = j;
-                //     real_f2_ampl = subc_energy;
-
-                // }
-
-                // freq_shift = double(real_f1 + real_f2 - f1 - f2)/2/size;
-
                 return i*size;
             }
         }
@@ -223,7 +191,7 @@ public:
                 shift *= step;
             }
         }
-        std::cout<<"step "<<std::arg(step)<<'\n';
+        // std::cout<<"step "<<std::arg(step)<<'\n';
     }
 
     void pr_phase_sinh(complex_double* pr, int pr_size){
@@ -245,17 +213,74 @@ public:
         return fft_task.read();   
     }
 
-    void freq_shift(double& freq_shift){
-        complex_double step = std::exp(complex_double(0, 1)*freq_shift);
-        complex_double shift = complex_double(1, 0);
-        std::cout<<"step "<<std::arg(step)<<' ';
-        for (int j = 0; j < size; j++){
-            output[0][j] *= shift;
-            shift *= step;
-        }
+    double pilot_freq_shift() {
+    complex_vector spec(size, complex_double(0.0));
+    std::vector<double> amplitude(size, 0.0);
+
+    fftw_plan plan = fftw_plan_dft_1d(
+        size,
+        reinterpret_cast<fftw_complex*>(output[0]),
+        reinterpret_cast<fftw_complex*>(spec.data()),
+        FFTW_FORWARD,
+        FFTW_ESTIMATE
+    );
+    fftw_execute(plan);
+    fftw_destroy_plan(plan);
+
+    for (int i = 0; i < size; i++) {
+        amplitude[i] = std::abs(spec[i]);
     }
 
-    
+    double rel_bw = double(fft_size)/(fft_size+cp_size);
+    double rel_pilot_w = rel_bw/num_pilot_subc;
+    double rel_start = (1.0 - rel_bw - rel_pilot_w)/2.0;
+
+    int pilot_w = int(size*rel_pilot_w);
+    int start = int(size*rel_start);
+
+    std::vector<double> amp_extended = amplitude;
+    int amp_size = size;
+
+    // Расширение спектра, если нужно
+    if (start < 0) {
+        start = 0;
+        std::vector<double> extended(size*3, 0.0);
+        std::copy(amplitude.begin(), amplitude.end(), extended.begin()+size);
+        amp_extended.swap(extended);
+        amp_size = static_cast<int>(amp_extended.size());
+    }
+
+    std::vector<int> top_indexes(num_pilot_subc+1);
+    for (int i = 0; i <= num_pilot_subc; i++) {
+        int seg_start = start + i*pilot_w;
+        if (seg_start >= amp_size) break; // не выходим за границы
+        int seg_end = std::min(seg_start + pilot_w, amp_size);
+
+        auto max_it = std::max_element(amp_extended.begin() + seg_start, amp_extended.begin() + seg_end);
+        top_indexes[i] = static_cast<int>(std::distance(amp_extended.begin(), max_it));
+    }
+
+    // Удаляем центральный пилот
+    if (!top_indexes.empty() && num_pilot_subc/2 < top_indexes.size()) {
+        top_indexes.erase(top_indexes.begin() + num_pilot_subc/2);
+    }
+
+    double sum = std::accumulate(top_indexes.begin(), top_indexes.end(), 0.0);
+    double mean = sum / top_indexes.size();
+    double shift = mean - size/2.0;
+
+    return shift/size;
+}
+
+    void freq_shift(double& shift){
+        complex_double step = std::exp(complex_double(0, -2*M_PIf64*shift));
+        complex_double phase = complex_double(1, 0);
+
+        for(int i = 0; i < size; i++){
+            output[0][i] *= phase;
+            phase *= step;
+        }
+    }
 
 };
 

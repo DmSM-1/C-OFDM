@@ -13,139 +13,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <iterator>
-
-
-template <typename Iter>
-void write_complex_to_file(const std::string &filename, Iter begin, Iter end) {
-    using Type = typename std::iterator_traits<Iter>::value_type::value_type; 
-
-    std::ofstream fout(filename, std::ios::binary);
-    if (!fout) {
-        throw std::runtime_error("Cannot open file");
-    }
-
-    for (auto it = begin; it != end; ++it) {
-        Type re = it->real();
-        Type im = it->imag();
-        fout.write(reinterpret_cast<const char*>(&re), sizeof(Type));
-        fout.write(reinterpret_cast<const char*>(&im), sizeof(Type));
-    }
-
-    fout.close();
-}
-
-template <typename Iter>
-void read_complex_from_file(const std::string &filename, Iter out) {
-    using Type = typename std::iterator_traits<Iter>::value_type::value_type; // тип числа (float, double, ...)
-
-    std::ifstream fin(filename, std::ios::binary);
-    if (!fin) {
-        throw std::runtime_error("Cannot open file");
-    }
-
-    Type re, im;
-    while (fin.read(reinterpret_cast<char*>(&re), sizeof(Type))) {
-        if (!fin.read(reinterpret_cast<char*>(&im), sizeof(Type))) {
-            throw std::runtime_error("File corrupted: incomplete complex number");
-        }
-        *out++ = std::complex<Type>(re, im);
-    }
-}
-
-
-void write_double_to_file(const std::string &filename, const std::vector<double> &data) {
-    std::ofstream fout(filename, std::ios::binary);
-    if (!fout) {
-        throw std::runtime_error("Cannot open file");
-    }
-    fout.write(reinterpret_cast<const char*>(data.data()), data.size() * sizeof(double));
-    fout.close();
-}
-
-
-void send_data(const char* pipe, const complex16_vector& buf) {
-    int fd = open(pipe, O_WRONLY | O_NONBLOCK);
-    if (fd < 0) {
-
-        return;
-    }
-
-    for (auto& s : buf) {
-        int16_t data[2];
-        data[0] = s.real();
-        data[1] = s.imag(); 
-
-        ssize_t written = write(fd, data, sizeof(data));
-        if (written < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                // Pipe временно заполнен, пропускаем этот сэмпл
-                continue;
-            } else {
-                perror("write pipe");
-                break;
-            }
-        }
-    }
-
-    close(fd);
-}
-
-
-// void write_complex_to_pipe(const char* pipe_path,
-//                            std::vector<std::complex<double>>::iterator begin,
-//                            std::vector<std::complex<double>>::iterator end)
-// {
-//     // Открываем pipe вручную через open с O_WRONLY | O_NONBLOCK
-//     int fd = open(pipe_path, O_WRONLY | O_NONBLOCK);
-//     if (fd < 0) throw std::runtime_error("Cannot open pipe");
-
-//     for (auto it = begin; it != end; ++it) {
-//         double data[2] = { it->real(), it->imag() };
-//         ssize_t written = write(fd, data, sizeof(data));
-//         if (written < 0) {
-//             if (errno == EAGAIN || errno == EWOULDBLOCK) continue;
-//             else { perror("write"); break; }
-//         }
-//     }
-
-//     close(fd);
-// }
-
-
-template <typename Iter>
-void write_complex_to_pipe(Iter begin, Iter end, const char* pipe_name) {
-    std::ofstream pipe(pipe_name, std::ios::binary);
-    for (Iter it = begin; it != end; ++it) {
-        double re = it->real();
-        double im = it->imag();
-        pipe.write(reinterpret_cast<char*>(&re), sizeof(double));
-        pipe.write(reinterpret_cast<char*>(&im), sizeof(double));
-    }
-    pipe.close();
-}
-
-
-template<typename F>
-long long bench_us(F&& f, int warmup = 5, int iters = 10000) {
-
-    for (int i = 0; i < warmup; ++i) f();
-
-    long long total_us = 0;
-    for (int i = 0; i < iters; ++i) {
-        auto t0 = std::chrono::steady_clock::now();
-        f();
-        auto t1 = std::chrono::steady_clock::now();
-        total_us += std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
-    }
-    return total_us / iters;
-}
-
-
-void print_vector(std::vector<uint8_t>& v){
-    for (auto &i : v)
-        std::cout<<i;
-    std::cout<<"\n";
-}
+#include "io.hpp"
 
 
 
@@ -174,28 +42,38 @@ int main(){
     auto tx_data    = tx_frame.get_int16();
   
 
-    tx_sdr.send(tx_data);
-    rx_sdr.recv(rx_frame.rx_frame_int16_buf);
+    write_complex_to_file("data/tx_data.bin", tx_data.begin(), tx_data.end());
+    read_complex_from_file("data/tx_data.bin", rx_frame.rx_frame_int16_buf.begin());
+
+    // tx_sdr.send(tx_data);
+    // rx_sdr.recv(rx_frame.rx_frame_int16_buf);
 
 
     rx_frame.form_int16_to_double();
     auto symb_begin = rx_frame.t2sin.find_next_symb_with_t2sin(rx_frame.rx_frame_buf, 0);
 
     rx_frame.preamble.find_cor_with_preamble(rx_frame.rx_frame_buf, symb_begin);
+    
     auto preamble_begin = rx_frame.preamble.find_start_symb_with_preamble(rx_frame.rx_frame_buf, symb_begin);
-    std::cout << "preamble begin " << preamble_begin << " " << rx_frame.preamble.cor.size() << " f1 = "<<rx_frame.t2sin.real_f1<<" f2 = "<<rx_frame.t2sin.real_f2<<" shift = "<<rx_frame.t2sin.freq_shift<<'\n';
-
+    
     auto frame_begin = symb_begin+preamble_begin-rx_frame.t2sin.size;
-
+    
     memcpy(rx_frame.tx_frame_buf.data(), rx_frame.rx_frame_buf.data()+frame_begin, sizeof(complex_double)*(rx_frame.output_size));
+
+
+    // double pilot_freq_shift = rx_frame.message_with_preamble.pilot_freq_shift();
+    // rx_frame.message_with_preamble.freq_shift(pilot_freq_shift);
+    // rx_frame.message_with_preamble.cp_freq_sinh();
+    // rx_frame.message_with_preamble.pr_phase_sinh(rx_frame.preamble.output[0], rx_frame.preamble.size);
     
     auto constell = rx_frame.message.fft();
 
-    write_complex_to_file("data/data.bin", rx_frame.rx_frame_buf.begin()+symb_begin, rx_frame.rx_frame_buf.begin()+symb_begin+rx_frame.output_size);    
+    write_complex_to_file("data/data.bin", rx_frame.rx_frame_buf.begin(), rx_frame.rx_frame_buf.end());    
     write_double_to_file("data/cor.bin", rx_frame.preamble.cor);
     write_complex_to_file("data/frame.bin", rx_frame.tx_frame_buf.begin()+rx_frame.t2sin.size, rx_frame.tx_frame_buf.end());
     write_complex_to_file("data/constell.bin", constell.begin(), constell.end());
 
+    
     return 0;
 }
 

@@ -61,7 +61,7 @@ def read_complex_from_file(filename):
 
 
 
-input_data = read_complex_from_file("tx.bin")
+input_data = read_complex_from_file("data/tx.bin")
 input_data = np.hstack((np.zeros_like(input_data), input_data, np.zeros_like(input_data)))
 output_data = np.zeros(input_data.size*10, dtype = input_data.dtype)
 
@@ -73,14 +73,7 @@ rx_sdr = get_rx(2.8e9, 5e6, 20e6, output_data.size, rx_hardwaregain_chan0=60)
 tx_sdr.tx(input_data)
 output_data = rx_sdr.rx()
 
-
-plt.plot(np.abs(input_data))
-plt.show()
-
-plt.plot(np.abs(output_data))
-plt.show()
-
-np.save("data" ,output_data)
+np.save("data/rx.bin" ,output_data)
 
 
 

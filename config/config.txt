@@ -1,14 +1,14 @@
-fft_size        = 64
-num_data_subc   = 48
-num_pilot_subc  = 4
-cp_size         = 32
+fft_size        = 256
+num_data_subc   = 128
+num_pilot_subc  = 16
+cp_size         = 256
 
-num_symb        = 16
+num_symb        = 4
 
 num_pr_symb     = 4
 pr_sin_len      = 128
 pr_seed         = 42
-pr_level        = 5
+pr_level        = 4
 
 T2sin_size      = 256
 T2_sin_f1       = 17
