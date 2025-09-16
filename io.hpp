@@ -10,6 +10,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <iterator>
+#include <Python.h>
+
 
 template <typename Iter>
 void write_complex_to_file(const std::string &filename, Iter begin, Iter end) {

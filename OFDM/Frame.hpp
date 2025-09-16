@@ -1,3 +1,5 @@
+#pragma once
+
 #include <stdlib.h>
 #include <vector>
 #include <complex>
@@ -86,6 +88,60 @@ public:
 
     T2SIN_FORM(ConfigMap& config);
     void set(complex_double* buf_ptr);
+
+
+        std::vector<double> corr(complex_vector& signal){
+        
+        int cycles      = signal.size()/size;
+
+        std::vector<double> corr(cycles, 0.0);
+
+        auto signal_ptr = signal.data();
+        auto buf_ptr    = detect_buf.data();
+        
+        double total_energy = 0.0;
+        double sin_energy   = 0.0;
+        double subc_energy  = 0.0;
+        double re           = 0.0;
+        double im           = 0.0;
+        double rel          = 0.0;
+
+        for(int i = 0; i < cycles; i++, signal_ptr+=size){
+
+            total_energy    = 0.0;
+            sin_energy      = 0.0;
+            
+            memcpy(buf_ptr, signal_ptr, size*sizeof(complex_double));
+            fftw_execute(detect_plan);
+
+
+
+            for (int j = 0; j < size; j++){
+                re = detect_buf[j].real();
+                im = detect_buf[j].imag();
+
+                subc_energy = re*re+im*im;
+
+                total_energy += subc_energy;
+                sin_energy += detect_mask[j]*subc_energy;
+            }
+            
+            if (total_energy == 0)
+                continue;
+            
+            rel = sin_energy/total_energy;
+
+            if (std::isnan(rel))
+                continue;
+
+            if (rel > level){
+
+                corr[i] = rel;
+            }
+        }
+
+        return corr;
+    }
 
 
     int find_next_symb_with_t2sin(complex_vector& signal, int start_index){
@@ -314,11 +370,11 @@ public:
     OFDM_FORM       message;
     OFDM_FORM       message_with_preamble;
 
-    complex_vector tx_buf;
-    complex16_vector tx_int16_buf;
+    complex_vector buf;
+    complex16_vector int16_buf;
 
-    complex_vector rx_buf;
-    complex16_vector rx_int16_buf;
+    complex_vector from_sdr_buf;
+    complex16_vector from_sdr_int16_buf;
 
     int usefull_size;
     int output_size;
@@ -334,10 +390,10 @@ public:
     complex16_vector get_int16();
 
     void form_int16_to_double(){
-        int len = rx_buf.size();
+        int len = from_sdr_buf.size();
 
-        std::transform( rx_int16_buf.begin(), rx_int16_buf.end(),
-                        rx_buf.begin(),[](const std::complex<int16_t>& c){
+        std::transform( from_sdr_int16_buf.begin(), from_sdr_int16_buf.end(),
+                        from_sdr_buf.begin(),[](const std::complex<int16_t>& c){
                    return std::complex<double>(c.real(), c.imag());
                });
         

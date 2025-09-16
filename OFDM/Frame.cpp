@@ -196,19 +196,19 @@ FRAME_FORM::FRAME_FORM(const std::string& CONFIGNAME)
         preamble(config),
         message(config),
         message_with_preamble(config, true, true),
-        tx_buf(t2sin.size+preamble.size+message.size, complex_double(0.0, 0.0)),
-        tx_int16_buf(tx_buf.size()),
-        rx_buf(tx_buf.size()*config["rx_buf_size"], complex_double(0.0, 0.0)),
-        rx_int16_buf(rx_buf.size()),
+        buf(t2sin.size+preamble.size+message.size, complex_double(0.0, 0.0)),
+        int16_buf(buf.size()),
+        from_sdr_buf(buf.size()*config["rx_buf_size"], complex_double(0.0, 0.0)),
+        from_sdr_int16_buf(from_sdr_buf.size()),
         usefull_size(message.usefull_size*message.modType/8),
-        output_size(tx_buf.size()),
+        output_size(buf.size()),
         bit_preambple(usefull_size, 0)
 {
 
-    t2sin.set(tx_buf.data());
-    preamble.set(tx_buf.data()+t2sin.size);
-    message.set(tx_buf.data()+t2sin.size+preamble.size);
-    message_with_preamble.set(tx_buf.data()+t2sin.size);
+    t2sin.set(buf.data());
+    preamble.set(buf.data()+t2sin.size);
+    message.set(buf.data()+t2sin.size+preamble.size);
+    message_with_preamble.set(buf.data()+t2sin.size);
 }
 
 
@@ -217,23 +217,23 @@ void FRAME_FORM::write(bit_vector& input){
 }
 
 bit_vector FRAME_FORM::read(void* transmitted_data){
-    memcpy(tx_buf.data(), transmitted_data, sizeof(complex_double)*tx_buf.size());
+    memcpy(buf.data(), transmitted_data, sizeof(complex_double)*buf.size());
     return message.read();
 }
 
 complex_vector FRAME_FORM::get(){
-    return tx_buf;
+    return buf;
 }
 
 
 complex16_vector FRAME_FORM::get_int16(){
-    int len = tx_buf.size();
+    int len = buf.size();
     for (int i = 0; i < len; i++){
-        tx_buf[i] *= config["mult"];
-        tx_int16_buf[i] = std::complex<int16_t>(tx_buf[i]);
+        buf[i] *= config["mult"];
+        int16_buf[i] = std::complex<int16_t>(buf[i]);
         // frame_int16_buf[i] *= 16;
     }
-    return tx_int16_buf;
+    return int16_buf;
 }
 
 

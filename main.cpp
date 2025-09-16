@@ -39,28 +39,33 @@ int main(){
     auto mod_data   = tx_frame.get();
     auto tx_data    = tx_frame.get_int16();
   
-    std::copy(tx_frame.tx_int16_buf.begin(), tx_frame.tx_int16_buf.end(), rx_frame.rx_int16_buf.begin());    
-
+    std::copy(tx_frame.int16_buf.begin(), tx_frame.int16_buf.end(), rx_frame.from_sdr_int16_buf.begin());    
+    
     rx_frame.form_int16_to_double();
     
-    auto result_mes = rx_frame.read(rx_frame.rx_buf.data());
-    result_mes.resize(origin_mes.size());
-
-    std::cout<<(result_mes==origin_mes)<<'\n';
-
-    write_complex_to_file("data/data.bin", rx_frame.rx_buf);
 
 
+    auto t2_sin_corr = rx_frame.t2sin.corr(rx_frame.from_sdr_buf);
 
-    // Py_Initialize();
-    // PyRun_SimpleString(
-    //     "import matplotlib.pyplot as plt\n"
-    //     "import numpy as np\n"
-    //     "arr = np.fromfile('data/data.bin', dtype = np.float64)\n"
-    //     "arr = arr[::2] + 1j * arr[1::2]\n"
-    //     "plt.plot(np.abs(arr))\n"
-    //     "plt.show()\n");
-    // Py_Finalize();
+    write_complex_to_file("data/data.bin", rx_frame.from_sdr_buf);
+    write_double_to_file("data/t2_sin_corr.bin", t2_sin_corr);
+
+
+    Py_Initialize();
+    PyRun_SimpleString(
+        "import matplotlib.pyplot as plt\n"
+        "import numpy as np\n"
+
+        "arr = np.fromfile('data/data.bin', dtype = np.float64)\n"
+        "arr = arr[::2] + 1j * arr[1::2]\n"
+        "arr /= np.max(np.abs(arr))\n"
+        "plt.plot(np.abs(arr))\n"
+
+        "corr = np.fromfile('data/t2_sin_corr.bin', dtype = np.float64)\n"
+        "corr /= np.max(corr)\n"
+        "plt.plot(np.arange(0, arr.size, arr.size/corr.size), corr)\n"
+        "plt.show()\n");
+    Py_Finalize();
 
     // write_complex_to_file("data/tx_data.bin", tx_data.begin(), tx_data.end());
     // read_complex_from_file("data/tx_data.bin", rx_frame.rx_frame_int16_buf.begin());
