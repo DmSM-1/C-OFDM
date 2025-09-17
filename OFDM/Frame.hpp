@@ -19,6 +19,7 @@
 #include <random>
 
 
+
 const complex_double REAL_ONE(1.0, 0.0);
 
 
@@ -144,7 +145,7 @@ public:
     }
 
 
-    int find_next_symb_with_t2sin(complex_vector& signal, int start_index){
+    int find_t2sin(complex_vector& signal, int start_index){
         
         int cycles      = signal.size()/size;
 
@@ -269,7 +270,8 @@ public:
         return fft_task.read();   
     }
 
-    double pilot_freq_shift() {
+
+double pilot_freq_sinh(){
     complex_vector spec(size, complex_double(0.0));
     std::vector<double> amplitude(size, 0.0);
 
@@ -280,53 +282,49 @@ public:
         FFTW_FORWARD,
         FFTW_ESTIMATE
     );
+
     fftw_execute(plan);
     fftw_destroy_plan(plan);
 
+    complex_vector shifted(size);
+    int half = size / 2;
+    for (int i = 0; i < half; i++) {
+        shifted[i] = spec[i + half];
+        shifted[i + half] = spec[i];
+    }
+    
     for (int i = 0; i < size; i++) {
-        amplitude[i] = std::abs(spec[i]);
+        amplitude[i] = std::abs(shifted[i]);
     }
 
-    double rel_bw = double(fft_size)/(fft_size+cp_size);
+    double rel_bw = double(num_data_subc+num_pilot_subc)/(fft_size);
     double rel_pilot_w = rel_bw/num_pilot_subc;
-    double rel_start = (1.0 - rel_bw - rel_pilot_w)/2.0;
-
     int pilot_w = int(size*rel_pilot_w);
-    int start = int(size*rel_start);
+    std::vector<int> borders(num_pilot_subc+2, 0);
 
-    std::vector<double> amp_extended = amplitude;
-    int amp_size = size;
-
-    // Расширение спектра, если нужно
-    if (start < 0) {
-        start = 0;
-        std::vector<double> extended(size*3, 0.0);
-        std::copy(amplitude.begin(), amplitude.end(), extended.begin()+size);
-        amp_extended.swap(extended);
-        amp_size = static_cast<int>(amp_extended.size());
+    for (int i = 0, j = int((1.0 - rel_bw - rel_pilot_w)/2.0*size); i < num_pilot_subc+2; i++){
+        borders[i] = j;
+        j += pilot_w;
     }
 
-    std::vector<int> top_indexes(num_pilot_subc+1);
-    for (int i = 0; i <= num_pilot_subc; i++) {
-        int seg_start = start + i*pilot_w;
-        if (seg_start >= amp_size) break;
-        int seg_end = std::min(seg_start + pilot_w, amp_size);
+    borders[0] = std::max(0, borders[0]);
+    borders[num_data_subc+1] = std::min(size, borders[num_data_subc+1]);
 
-        auto max_it = std::max_element(amp_extended.begin() + seg_start, amp_extended.begin() + seg_end);
-        top_indexes[i] = static_cast<int>(std::distance(amp_extended.begin(), max_it));
+    double shift = 0;
+    for (int i = 0; i < num_pilot_subc+1; i++){
+        if (i == num_pilot_subc/2)
+            continue;
+        
+        auto it = std::max_element(amplitude.begin()+borders[i], amplitude.begin()+borders[i+1]); 
+        shift += std::distance(amplitude.begin(), it);
     }
+    shift /= num_pilot_subc;
+    shift -= size/2;
+    shift /= size;
 
-    // Удаляем центральный пилот
-    if (!top_indexes.empty() && num_pilot_subc/2 < top_indexes.size()) {
-        top_indexes.erase(top_indexes.begin() + num_pilot_subc/2);
-    }
-
-    double sum = std::accumulate(top_indexes.begin(), top_indexes.end(), 0.0);
-    double mean = sum / top_indexes.size();
-    double shift = mean - size/2.0;
-
-    return shift/size;
+    return shift;
 }
+
 
     void freq_shift(double& shift){
         complex_double step = std::exp(complex_double(0, -2*M_PIf64*shift));
@@ -353,8 +351,8 @@ public:
     PREAMBLE_FORM(ConfigMap& config);
     void set(complex_double* buf_ptr);
 
-    void find_cor_with_preamble(complex_vector& input, int start);
-    int find_start_symb_with_preamble(complex_vector& input, int start);
+    void find_corr(complex_vector& input, int start);
+    int find_preamble(complex_vector& input, int start);
 
 };
 

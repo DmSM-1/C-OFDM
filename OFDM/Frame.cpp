@@ -46,7 +46,7 @@ FFT_FORM::FFT_FORM(int fft_size,int num_data_subc,int num_pilot_subc, int num_sy
 
 void FFT_FORM::write(complex_vector& input){
     for(auto &i : pilot)
-        *i = REAL_ONE;
+        *i = complex_double(5.0, 0.0);
 
     auto input_ptr = input.data();
     for(size_t i = 0; i < pilot.size(); i++, input_ptr+=segment_size){
@@ -105,7 +105,7 @@ T2SIN_FORM::T2SIN_FORM(ConfigMap& config):
 
     int sum = (b1 - a1 + 1) + (b2 - a2 + 1);
 
-    double val = 1.0 / sum;
+    double val = 1.0;
 
     for (int i = a1; i <= b1; i++) {
         detect_mask[i] += val;
@@ -239,7 +239,7 @@ complex16_vector FRAME_FORM::get_int16(){
 
 PREAMBLE_FORM::PREAMBLE_FORM(ConfigMap& config)
 :   OFDM_FORM(config, false),
-    level((double)config["pr_level"]),
+    level((double)config["pr_level"]/1000),
     preamble(usefull_size*modType/8, 0),
     mod_preamble(size, complex_double(0,0)),
     conjected_sinh_part(pr_sin_len, complex_double(0,0)),
@@ -259,13 +259,19 @@ void PREAMBLE_FORM::set(complex_double* buf_ptr){
     write(preamble);
     memcpy(mod_preamble.data(), output[0], mod_preamble.size()*sizeof(complex_double));
 
+    double norm = 0.0;
     for (int i = 0; i < pr_sin_len; i++){
         conjected_sinh_part[i] = std::conj(mod_preamble[i]);
+        norm += std::abs(conjected_sinh_part[i]*conjected_sinh_part[i]);
+    }
+    norm = std::sqrt(norm);
+    for (int i = 0; i < pr_sin_len; i++){
+        conjected_sinh_part[i] /= complex_double(norm);
     }
 }
 
 
-void PREAMBLE_FORM::find_cor_with_preamble(complex_vector& input, int start){
+void PREAMBLE_FORM::find_corr(complex_vector& input, int start){
 
     std::fill(cor.begin(), cor.end(), 0.0);
     double norm = 0;
@@ -306,7 +312,7 @@ void PREAMBLE_FORM::find_cor_with_preamble(complex_vector& input, int start){
 }
 
 
-int PREAMBLE_FORM::find_start_symb_with_preamble(complex_vector& input, int start){
+int PREAMBLE_FORM::find_preamble(complex_vector& input, int start){
 
     // std::fill(cor.begin(), cor.end(), 0.0);
     double norm = 0;
