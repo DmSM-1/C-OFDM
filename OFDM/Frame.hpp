@@ -46,8 +46,9 @@ public:
     complex_vector restored_buf;
     
     double norm_factor;
+    double pilot_ampl;
 
-    FFT_FORM(int fft_size,int num_data_subc,int num_pilot_subc, int num_symb);
+    FFT_FORM(int fft_size,int num_data_subc,int num_pilot_subc, int num_symb, double pilot_ampl = 1.0);
     void write(complex_vector& input);
     complex_vector& read();
 };
@@ -226,6 +227,7 @@ public:
     Modulation Mod;
 
     int byte_fft_size;
+    int pilot_ampl;
 
     OFDM_FORM(ConfigMap& config, bool data = true, bool with_preamble = false);
     virtual void set(complex_double* buf_ptr);
@@ -248,7 +250,6 @@ public:
                 shift *= step;
             }
         }
-        // std::cout<<"step "<<std::arg(step)<<'\n';
     }
 
     void pr_phase_sinh(complex_double* pr, int pr_size){
@@ -271,59 +272,59 @@ public:
     }
 
 
-double pilot_freq_sinh(){
-    complex_vector spec(size, complex_double(0.0));
-    std::vector<double> amplitude(size, 0.0);
+    double pilot_freq_sinh(){
+        complex_vector spec(size, complex_double(0.0));
+        std::vector<double> amplitude(size, 0.0);
 
-    fftw_plan plan = fftw_plan_dft_1d(
-        size,
-        reinterpret_cast<fftw_complex*>(output[0]),
-        reinterpret_cast<fftw_complex*>(spec.data()),
-        FFTW_FORWARD,
-        FFTW_ESTIMATE
-    );
+        fftw_plan plan = fftw_plan_dft_1d(
+            size,
+            reinterpret_cast<fftw_complex*>(output[0]),
+            reinterpret_cast<fftw_complex*>(spec.data()),
+            FFTW_FORWARD,
+            FFTW_ESTIMATE
+        );
 
-    fftw_execute(plan);
-    fftw_destroy_plan(plan);
+        fftw_execute(plan);
+        fftw_destroy_plan(plan);
 
-    complex_vector shifted(size);
-    int half = size / 2;
-    for (int i = 0; i < half; i++) {
-        shifted[i] = spec[i + half];
-        shifted[i + half] = spec[i];
-    }
-    
-    for (int i = 0; i < size; i++) {
-        amplitude[i] = std::abs(shifted[i]);
-    }
-
-    double rel_bw = double(num_data_subc+num_pilot_subc)/(fft_size);
-    double rel_pilot_w = rel_bw/num_pilot_subc;
-    int pilot_w = int(size*rel_pilot_w);
-    std::vector<int> borders(num_pilot_subc+2, 0);
-
-    for (int i = 0, j = int((1.0 - rel_bw - rel_pilot_w)/2.0*size); i < num_pilot_subc+2; i++){
-        borders[i] = j;
-        j += pilot_w;
-    }
-
-    borders[0] = std::max(0, borders[0]);
-    borders[num_data_subc+1] = std::min(size, borders[num_data_subc+1]);
-
-    double shift = 0;
-    for (int i = 0; i < num_pilot_subc+1; i++){
-        if (i == num_pilot_subc/2)
-            continue;
+        complex_vector shifted(size);
+        int half = size / 2;
+        for (int i = 0; i < half; i++) {
+            shifted[i] = spec[i + half];
+            shifted[i + half] = spec[i];
+        }
         
-        auto it = std::max_element(amplitude.begin()+borders[i], amplitude.begin()+borders[i+1]); 
-        shift += std::distance(amplitude.begin(), it);
-    }
-    shift /= num_pilot_subc;
-    shift -= size/2;
-    shift /= size;
+        for (int i = 0; i < size; i++) {
+            amplitude[i] = std::abs(shifted[i]);
+        }
 
-    return shift;
-}
+        double rel_bw = double(num_data_subc+num_pilot_subc)/(fft_size);
+        double rel_pilot_w = rel_bw/num_pilot_subc;
+        int pilot_w = int(size*rel_pilot_w);
+        std::vector<int> borders(num_pilot_subc+2, 0);
+
+        for (int i = 0, j = int((1.0 - rel_bw - rel_pilot_w)/2.0*size); i < num_pilot_subc+2; i++){
+            borders[i] = j;
+            j += pilot_w;
+        }
+
+        borders[0] = std::max(0, borders[0]);
+        borders[num_data_subc+1] = std::min(size, borders[num_data_subc+1]);
+
+        double shift = 0;
+        for (int i = 0; i < num_pilot_subc+1; i++){
+            if (i == num_pilot_subc/2)
+                continue;
+            
+            auto it = std::max_element(amplitude.begin()+borders[i], amplitude.begin()+borders[i+1]); 
+            shift += std::distance(amplitude.begin(), it);
+        }
+        shift /= num_pilot_subc;
+        shift -= size/2;
+        shift /= size;
+
+        return shift;
+    }
 
 
     void freq_shift(double& shift){
@@ -336,6 +337,11 @@ double pilot_freq_sinh(){
         }
     }
 
+    // std::vector<double> phases
+
+
+
+
 };
 
 
@@ -345,14 +351,31 @@ public:
     double level;
     bit_vector preamble;
     complex_vector mod_preamble;
+    complex_vector ofdm_preamble;
     complex_vector conjected_sinh_part;
     std::vector<double> cor;
+    complex_vector phases;
 
     PREAMBLE_FORM(ConfigMap& config);
     void set(complex_double* buf_ptr);
 
     void find_corr(complex_vector& input, int start);
     int find_preamble(complex_vector& input, int start);
+
+    complex_vector phase_shift(){
+        auto pr = fft();
+        std::fill(phases.begin(), phases.end(), complex_double(0.0, 0.0));
+        for (int i = 0; i < num_data_subc*num_symb; i++){
+            phases[i%num_data_subc] += pr[i]/mod_preamble[i];
+        }
+        for (int i = 0; i < num_data_subc; i++){
+            phases[i] /= complex_double(num_symb, 0);
+        }
+        return phases;
+    }
+    
+
+
 
 };
 
@@ -388,7 +411,6 @@ public:
     complex16_vector get_int16();
 
     void form_int16_to_double(){
-        int len = from_sdr_buf.size();
 
         std::transform( from_sdr_int16_buf.begin(), from_sdr_int16_buf.end(),
                         from_sdr_buf.begin(),[](const std::complex<int16_t>& c){

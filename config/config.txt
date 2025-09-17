@@ -1,7 +1,7 @@
-fft_size        = 256
-num_data_subc   = 128
+fft_size        = 1024
+num_data_subc   = 512
 num_pilot_subc  = 4
-cp_size         = 32
+cp_size         = 128
 
 num_symb        = 4
 
@@ -16,12 +16,14 @@ T2_sin_f2       = 51
 T2_sin_level    = 500
 smooth          = 5
 
-modType         = 2
+modType         = 4
+
+pilot_ampl      = 2500
 
 bw_hz           = 20000000
-fs_hz           = 5000000
+fs_hz           = 10000000
 lo_hz           = 2800000000
 hardwaregain    = 50
-mult            = 300
+mult            = 100
 rx_buf_size     = 10
 tx_cycle_buf    = 0

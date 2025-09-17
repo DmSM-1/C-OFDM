@@ -11,8 +11,8 @@ for i in range(100):
     os.system("./main")
     
     # считываем OFDM frame
-    frame = np.fromfile('data/frame.bin', dtype=np.float64)
-    frame = frame[::2] + 1j * frame[1::2]
+    # frame = np.fromfile('data/frame.bin', dtype=np.float64)
+    # frame = frame[::2] + 1j * frame[1::2]
 
     # считываем созвездие IQ
     constell = np.fromfile('data/constell.bin', dtype=np.float64)

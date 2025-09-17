@@ -141,5 +141,5 @@ long long bench_us(F&& f, int warmup = 5, int iters = 10000) {
 void print_vector(std::vector<uint8_t>& v){
     for (auto &i : v)
         std::cout<<i;
-    std::cout<<"\n";
+    std::cout<<"\n\n";
 }
