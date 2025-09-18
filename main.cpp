@@ -52,7 +52,7 @@ int main(){
     rx_sdr.recv(rx_frame.from_sdr_int16_buf.data()+rx_frame.output_size);
     rx_frame.form_int16_to_double();
     
-    for (int l = 0; l < 10; l++){
+    for (int l = 0; l < 10000; l++){
 
         printf("\r");
         printf("Iter %6d", l);
@@ -115,7 +115,7 @@ int main(){
         auto res = rx_frame.message.Mod.demod(res_data);
         res.resize(rx_frame.usefull_size);
         
-        print_acc(rx_frame.usefull_size, origin_mes, res, "stat1.txt");
+        print_acc(rx_frame.usefull_size, origin_mes, res, "stat.txt");
         
         FILE* res_file = fopen("data.txt", "w");
         fwrite(res.data(), 1, res.size(), res_file);
