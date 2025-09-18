@@ -141,5 +141,32 @@ long long bench_us(F&& f, int warmup = 5, int iters = 10000) {
 void print_vector(std::vector<uint8_t>& v){
     for (auto &i : v)
         std::cout<<i;
-    std::cout<<"\n\n";
+    std::cout<<"\n";
+}
+
+
+void print_acc(const int size, const bit_vector& source, const bit_vector& result, const char* filename = "stat.txt"){
+
+    FILE* file = fopen(filename, "a");
+
+    double acc = 0.0;
+    for (int i = 0; i < size; i++){
+        acc += double(source[i]==result[i]);
+    }
+    acc /= size;
+    
+    fprintf(file, "ACCURACY: %.6lf ", acc);
+
+    acc = 0.0;
+    for (int i = 0; i < size; i++) {
+        uint8_t diff = result[i] ^ source[i];
+        for (int b = 0; b < 8; b++) {
+            acc += ((diff >> b) & 1) == 0;
+        }
+    }
+    acc /= (size * 8);
+
+    fprintf(file, "Bit-level ACCURACY: %3.6lf SIZE: %.3lf KB\n", acc, (double)size/1024);
+
+    fclose(file);
 }

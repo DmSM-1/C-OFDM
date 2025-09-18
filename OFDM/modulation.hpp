@@ -38,7 +38,7 @@ class Modulation{
         std::vector<complex_double> constell;
         size_t mod_index;
 
-        Modulation(mod_type mod);
+        Modulation(mod_type mod, int len_buf);
 
         complex_vector mod(std::vector<uint8_t>& bin_input);
         std::vector<uint8_t> demod(complex_vector& input);

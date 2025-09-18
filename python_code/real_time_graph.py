@@ -7,32 +7,37 @@ PIPE_PATH = '/tmp/row_input'
 if not os.path.exists(PIPE_PATH):
     raise FileNotFoundError(f"{PIPE_PATH} не найден")
 
-# Настраиваем график
-plt.ion()  # интерактивный режим
-fig, ax = plt.subplots()
-line, = ax.plot([], [])
-ax.set_xlabel('Sample Index')
-ax.set_ylabel('Amplitude')
-ax.set_title('Received Signal')
+# Настройка графика с заданным размером (12x8 дюймов)
+plt.ion()
+fig, ax = plt.subplots(figsize=(8, 8))
+scatter = ax.scatter([], [], s=10, color='blue')
+ax.set_xlabel('I (Real)')
+ax.set_ylabel('Q (Imag)')
+ax.set_title('Received Signal (Constellation)')
+ax.set_xlim(-1.5, 1.5)
+ax.set_ylim(-1.5, 1.5)
+ax.grid(True)
 
-# Фиксированные лимиты
-# ax.set_xlim(0, 18000)   # например, 2048 сэмплов на кадр
-# ax.set_ylim(0, 2048)  # диапазон амплитуд (подстрой под свои данные)
+CHUNK_SIZE = 1024 * 64  # читаем блоками по 64КБ
 
-# Открываем pipe для чтения
 with open(PIPE_PATH, 'rb') as f:
-    for j in range(10000):
-        raw = f.read()  # читаем доступные данные
+    for i in range(1):  # цикл только 10 итераций
+        raw = f.read(CHUNK_SIZE)
         if not raw:
-            continue  # ждём данные
-        
-        data = np.frombuffer(raw, dtype=np.int16)
-        if len(data) < 2:
+            plt.pause(0.01)
             continue
         
+        data = np.frombuffer(raw, dtype=np.float64)
+        if len(data) < 2:
+            continue
+        # делаем длину чётной
+        data = data[:len(data)//2*2]
         complex_data = data[::2] + 1j * data[1::2]
 
-        # Обновляем график
-        line.set_data(np.arange(complex_data.size), np.abs(complex_data))
-
+        # обновляем точки без очистки
+        scatter.set_offsets(np.c_[complex_data.real, complex_data.imag])
         plt.pause(0.01)
+
+# чтобы график не закрылся сразу после 10 итераций
+plt.ioff()
+plt.show()

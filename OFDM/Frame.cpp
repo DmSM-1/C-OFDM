@@ -160,7 +160,7 @@ OFDM_FORM::OFDM_FORM(ConfigMap& config, bool data, bool with_preamble)
           usefull_size(num_data_subc*num_symb),
           output(num_symb, nullptr),
           fft_task(fft_size, num_data_subc, num_pilot_subc, num_symb, double(config["pilot_ampl"])/1000),
-          Mod(modType),
+          Mod(modType, usefull_size),
           byte_fft_size(fft_size*sizeof(complex_double)),
           pilot_ampl(config["pilot_ampl"])
 {}
@@ -208,7 +208,7 @@ FRAME_FORM::FRAME_FORM(const std::string& CONFIGNAME)
         message_with_preamble(config, true, true),
         buf(t2sin.size+preamble.size+message.size, complex_double(0.0, 0.0)),
         int16_buf(buf.size()),
-        from_sdr_buf(buf.size()*config["rx_buf_size"], complex_double(0.0, 0.0)),
+        from_sdr_buf(buf.size()*(config["rx_buf_size"]+1), complex_double(0.0, 0.0)),
         from_sdr_int16_buf(from_sdr_buf.size()),
         usefull_size(message.usefull_size*message.modType/8),
         output_size(buf.size()),

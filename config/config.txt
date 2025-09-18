@@ -1,5 +1,5 @@
-fft_size        = 1024
-num_data_subc   = 512
+fft_size        = 512
+num_data_subc   = 256
 num_pilot_subc  = 4
 cp_size         = 128
 
@@ -23,7 +23,7 @@ pilot_ampl      = 2500
 bw_hz           = 20000000
 fs_hz           = 10000000
 lo_hz           = 2800000000
-hardwaregain    = 50
-mult            = 100
+hardwaregain    = 60
+mult            = 30
 rx_buf_size     = 10
-tx_cycle_buf    = 0
+tx_cycle_buf    = 1

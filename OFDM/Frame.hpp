@@ -148,9 +148,9 @@ public:
 
     int find_t2sin(complex_vector& signal, int start_index){
         
-        int cycles      = signal.size()/size;
+        int cycles      = (signal.size()-start_index)/size;
 
-        auto signal_ptr = signal.data();
+        auto signal_ptr = signal.data()+start_index;
         auto buf_ptr    = detect_buf.data();
         
         double total_energy = 0.0;
@@ -188,7 +188,7 @@ public:
 
             if (rel > level){
 
-                return i*size;
+                return i*size+start_index;
             }
         }
 
@@ -272,7 +272,7 @@ public:
     }
 
 
-    double pilot_freq_sinh(){
+    void pilot_freq_sinh(){
         complex_vector spec(size, complex_double(0.0));
         std::vector<double> amplitude(size, 0.0);
 
@@ -323,7 +323,7 @@ public:
         shift -= size/2;
         shift /= size;
 
-        return shift;
+        freq_shift(shift);
     }
 
 

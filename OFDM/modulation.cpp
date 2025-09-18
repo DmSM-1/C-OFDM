@@ -20,7 +20,11 @@ complex_double qam(uint8_t input, int deg){
 }
 
 
-Modulation::Modulation(mod_type mod): str_size(1u<<(mod/2)), modulation(mod), constell(1u<<mod, 0){
+Modulation::Modulation(mod_type mod, int len_buf)
+:   str_size(1u<<(mod/2)),
+    modulation(mod), 
+    constell(1u<<mod, 0)
+{
     mod_index = modulation;
     step = 2.0/(str_size-1);
     str_size_1 = 1.0/step;

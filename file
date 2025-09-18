@@ -1,0 +1,26 @@
+write_complex_to_file("data/ofdm_row_channel.bin", rx_frame.from_sdr_buf);
+    write_complex_to_file("data/ofdm_row_data.bin", rx_frame.buf);
+    write_complex_to_file("data/constell.bin", constell);
+
+    Py_Initialize();
+    PyRun_SimpleString(
+        "import matplotlib.pyplot as plt\n"
+        "import numpy as np\n"
+        "arr = np.fromfile('data/ofdm_row_channel.bin', dtype = np.float64)\n"
+        "arr = arr[::2] + 1j * arr[1::2]\n"
+        "plt.plot(np.abs(arr))\n"
+        "plt.show()\n"
+
+        "arr = np.fromfile('data/ofdm_row_data.bin', dtype = np.float64)\n"
+        "arr = arr[::2] + 1j * arr[1::2]\n"
+        "plt.plot(np.abs(arr))\n"
+        "plt.show()\n"
+
+        "arr = np.fromfile('data/constell.bin', dtype = np.float64)\n"
+        "arr = arr[::2] + 1j * arr[1::2]\n"
+        "plt.scatter(arr.real, arr.imag)\n"
+        "print(np.max(np.abs(arr.real)))\n"
+        "plt.show()\n"
+
+    );
+    Py_Finalize();
