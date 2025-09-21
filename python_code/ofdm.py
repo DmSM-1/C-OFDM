@@ -1,35 +1,52 @@
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
 
-# --- data.bin ---
-arr = np.fromfile('data/data.bin', dtype=np.float64)
-arr = arr[::2] + 1j * arr[1::2]
-# arr /= np.max(np.abs(arr))
-plt.plot(np.abs(arr))
-plt.title('data from SDR')
-plt.show()
+fig, axs = plt.subplots(2, 2, figsize=(12, 8))  # 2x2 графика
+axs = axs.flatten()  # упрощаем индексирование через axs[0], axs[1], ...
 
-# --- pr_corr.bin ---
-corr = np.fromfile('data/pr_corr.bin', dtype=np.float64)
-# corr /= np.max(corr)
-plt.plot(np.arange(0, arr.size, arr.size / corr.size), corr)
-plt.title('pr corr')
-plt.show()
+# -------- data.bin --------
+try:
+    arr_data = np.fromfile('data/data.bin', dtype=np.float64)
+    arr_data = arr_data[::2] + 1j * arr_data[1::2]
+    axs[0].plot(np.abs(arr_data))
+    axs[0].set_title('Data from SDR')
+except Exception as e:
+    print('Error loading data/data.bin:', e)
 
-# --- constell.bin ---
-arr = np.fromfile('data/constell.bin', dtype=np.float64)
-arr = arr[::2] + 1j * arr[1::2]
-plt.scatter(arr.real, arr.imag)
-plt.xlim(-1.1, 1.1)
-plt.ylim(-1.1, 1.1)
-plt.axis('equal')
-plt.show()
+# -------- t2_sin_corr.bin --------
+try:
+    corr = np.fromfile('data/t2_sin_corr.bin', dtype=np.float64)
+    x_corr = np.linspace(0, arr_data.size, corr.size)
+    axs[1].plot(x_corr, corr)
+    axs[1].set_title('T2 Sin Correlation')
+except Exception as e:
+    print('Error loading data/t2_sin_corr.bin:', e)
 
-# --- phases.bin ---
-arr = np.fromfile('data/phases.bin', dtype=np.float64)
-arr = arr[::2] + 1j * arr[1::2]
-plt.plot(np.angle(arr))
-plt.show()
+# -------- constell.bin --------
+try:
+    arr_const = np.fromfile('data/constell.bin', dtype=np.float64)
+    arr_const = arr_const[::2] + 1j * arr_const[1::2]
+    axs[2].scatter(arr_const.real, arr_const.imag, s=1)
+    axs[2].set_xlim(-1.5, 1.5)
+    axs[2].set_ylim(-1.5, 1.5)
+    axs[2].set_aspect('equal', 'box')
+    axs[2].set_title('Constellation')
+except Exception as e:
+    print('Error loading data/constell.bin:', e)
 
-plt.plot(np.abs(arr))
-plt.show()
+# -------- phases.bin --------
+try:
+    arr_phase = np.fromfile('data/phases.bin', dtype=np.float64)
+    arr_phase = arr_phase[::2] + 1j * arr_phase[1::2]
+    axs[3].plot(np.angle(arr_phase))
+    axs[3].set_title('Phases')
+except Exception as e:
+    print('Error loading data/phases.bin:', e)
+
+# Автоматическая расстановка графиков, чтобы подписи не накладывались
+plt.tight_layout()
+
+# Отображение графиков
+plt.show(block=False)
+plt.pause(3)      # окно открыто 3 секунды
+plt.close(fig)    # закрытие окна

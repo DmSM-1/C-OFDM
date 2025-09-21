@@ -30,14 +30,6 @@ int main(){
     FILE* file = fopen("WARANDPEACE.txt", "r");
     fread(origin_mes.data(), 1, origin_mes.size(), file);
     fclose(file);
-
-    // std::random_device rd;
-    // std::mt19937 gen(rd());
-    // std::uniform_int_distribution<int> dis(0, 255);
- 
-    // for (size_t i = 0; i < origin_mes.size(); i++) {
-    //     origin_mes[i] = dis(gen);
-    // }
     
     tx_frame.write(origin_mes);
     
