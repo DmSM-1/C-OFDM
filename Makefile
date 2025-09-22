@@ -4,15 +4,15 @@ LDFLAGS = -lfftw3 -lm -liio -lpython3.10
 BUILD = build
 
 # исходники (с путями)
-SRCS = main.cpp OFDM/modulation.cpp config/parser.cpp OFDM/Frame.cpp
+SRCS = main.cpp tx.cpp rx.cpp OFDM/modulation.cpp config/parser.cpp OFDM/Frame.cpp
 # объектники — только имена файлов, всё в build/
 OBJS = $(addprefix $(BUILD)/,$(notdir $(SRCS:.cpp=.o)))
 
-TARGET = main
+TARGETS = main tx rx
 
 .PHONY: all clean
 
-all: $(BUILD) $(TARGET)
+all: $(BUILD) $(TARGETS)
 
 $(BUILD):
 	mkdir -p $(BUILD)
@@ -23,8 +23,15 @@ vpath %.cpp . config OFDM
 $(BUILD)/%.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $(OBJS) $(LDFLAGS)
+# отдельные таргеты
+main: $(BUILD)/main.o $(BUILD)/modulation.o $(BUILD)/parser.o $(BUILD)/Frame.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+
+tx: $(BUILD)/tx.o $(BUILD)/modulation.o $(BUILD)/parser.o $(BUILD)/Frame.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+
+rx: $(BUILD)/rx.o $(BUILD)/modulation.o $(BUILD)/parser.o $(BUILD)/Frame.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 clean:
-	rm -rf $(BUILD) $(TARGET)
+	rm -rf $(BUILD) $(TARGETS)

@@ -15,6 +15,7 @@
 #include <iterator>
 #include "io/io.hpp"
 #include <Python.h>
+#include "mac/mac_frame.hpp"
 
 
 int main(){
@@ -22,20 +23,25 @@ int main(){
     FRAME_FORM tx_frame("config/config.txt");
     FRAME_FORM rx_frame("config/config.txt");
 
+    MAC mac(1, 0, rx_frame.usefull_size);
+    
     SDR tx_sdr(0, tx_frame.output_size, "config/config.txt");
-    SDR rx_sdr(1, tx_frame.output_size, "config/config.txt");
+    SDR rx_sdr(1, rx_frame.output_size, "config/config.txt");
 
 
-    bit_vector origin_mes(tx_frame.usefull_size);
+    bit_vector origin_mes(mac.payload);
     FILE* file = fopen("WARANDPEACE.txt", "r");
     fread(origin_mes.data(), 1, origin_mes.size(), file);
     fclose(file);
-    
-    tx_frame.write(origin_mes);
+
+    auto tx_mac_frame = mac.write(origin_mes, 0);
+
+    tx_frame.write(tx_mac_frame);
     
     auto mod_data   = tx_frame.get();
     auto tx_data    = tx_frame.get_int16();  
 
+    tx_sdr.send(tx_data);
     tx_sdr.send(tx_data);
     rx_sdr.recv(rx_frame.from_sdr_int16_buf);
     
@@ -56,7 +62,6 @@ int main(){
     rx_frame.message_with_preamble.cp_freq_sinh();
     rx_frame.message_with_preamble.pr_phase_sinh(rx_frame.preamble.ofdm_preamble.data(), rx_frame.preamble.size);
 
-    // rx_frame.preamble.chan_char_lq();
     auto chan_char = rx_frame.preamble.chan_char_lq();
     auto constell = rx_frame.message.fft();
     
@@ -70,10 +75,9 @@ int main(){
     write_complex_to_file("data/phases.bin", chan_char);
     write_complex_to_file("data/constell.bin", constell);
 
-    auto res = rx_frame.message.Mod.demod(constell);
+    auto res_ofdm = rx_frame.message.Mod.demod(constell);
 
-
-    res.resize(rx_frame.usefull_size);
+    auto res = mac.read(res_ofdm);
 
     double acc = 0.0;
     for (int i = 0; i < rx_frame.usefull_size; i++){
@@ -81,6 +85,7 @@ int main(){
     }
     acc /= rx_frame.usefull_size;
     
+    std::cout<<"FRAME FROM "<<mac.input_tx_id<<" TO "<<mac.input_rx_id<<" SEQ "<<mac.input_seq_num<<'\n';
     std::cout<<"ACCURACY: "<< acc <<"\n";
 
     acc = 0.0;
@@ -94,77 +99,11 @@ int main(){
 
     std::cout << "Bit-level ACCURACY: " << acc << "\n";
 
-
     FILE* res_file = fopen("data.txt", "w");
     fwrite(res.data(), 1, res.size(), res_file);
     fclose(res_file);
 
     system("python3 python_code/ofdm.py");
-    // print_vector(origin_mes);
-    // print_vector(res);
-
-
-    // Py_Initialize();
-    // PyRun_SimpleString(
-    //     "import matplotlib.pyplot as plt\n"
-    //     "import numpy as np\n"
-
-    //     "arr = np.fromfile('data/data.bin', dtype = np.float64)\n"
-    //     "arr = arr[::2] + 1j * arr[1::2]\n"
-    //     "#arr /= np.max(np.abs(arr))\n"
-    //     "plt.plot(np.abs(arr))\n"
-    //     "plt.title('data form sdr')\n"
-    //     "plt.show()\n"
-
-    //     // "corr = np.fromfile('data/t2_sin_corr.bin', dtype = np.float64)\n"
-    //     // "#corr /= np.max(corr)\n"
-    //     // "plt.plot(np.arange(0, arr.size, arr.size/corr.size), corr)\n"
-    //     // "plt.title('t2sin cor')\n"
-    //     // "plt.show()\n"
-
-    //     "corr = np.fromfile('data/pr_corr.bin', dtype = np.float64)\n"
-    //     "#corr /= np.max(corr)\n"
-    //     "plt.plot(np.arange(0, arr.size, arr.size/corr.size), corr)\n"
-    //     "plt.title('pr corr')\n"
-    //     "plt.show()\n"
-
-    //     // "arr = np.fromfile('data/row.bin', dtype = np.float64)\n"
-    //     // "arr = arr[::2] + 1j * arr[1::2]\n"
-    //     // "arr /= np.max(np.abs(arr))\n"
-    //     // "plt.title('preamble + message')\n"
-
-    //     // "arr1 = np.fromfile('data/source.bin', dtype = np.float64)\n"
-    //     // "arr1 = arr1[::2] + 1j * arr1[1::2]\n"
-    //     // "arr1 /= np.max(np.abs(arr1))\n"
-    //     // "plt.plot(np.abs(arr1))\n"
-    //     // "plt.plot(np.abs(arr))\n"
-    //     // "plt.title('preamble + message')\n"
-    //     // "plt.show()\n"
-
-    //     // "plt.plot(np.abs(np.fft.fftshift(np.fft.fft(arr1))))\n"
-    //     // "plt.plot(np.abs(np.fft.fftshift(np.fft.fft(arr))))\n"
-    //     // "plt.show()\n"
-
-    //     "arr = np.fromfile('data/constell.bin', dtype = np.float64)\n"
-    //     "arr = arr[::2] + 1j*arr[1::2]\n"
-    //     "plt.scatter(arr.real, arr.imag)\n"
-    //     "plt.xlim(-1.1, 1.1)\n"
-    //     "plt.ylim(-1.1, 1.1)\n"
-    //     "plt.axis('equal')\n"
-    //     "plt.show()\n"
-
-    //     "arr = np.fromfile('data/phases.bin', dtype = np.float64)\n"
-    //     "arr = arr[::2] + 1j*arr[1::2]\n"
-    //     "plt.plot(np.angle(arr))\n"
-    //     "plt.show()\n"
-
-    // );   
-
-
-    // Py_Finalize();
-
-
-
     
     return 0;
 }

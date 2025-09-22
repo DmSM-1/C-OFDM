@@ -46,6 +46,7 @@ FFT_FORM::FFT_FORM(int fft_size,int num_data_subc,int num_pilot_subc, int num_sy
 
 
 void FFT_FORM::write(complex_vector& input){
+    std::fill(FFT_buf.begin(), FFT_buf.end(), complex_double(0));
     for(auto &i : pilot)
         *i = complex_double(pilot_ampl, 0.0);
 
@@ -239,8 +240,7 @@ complex_vector FRAME_FORM::get(){
 complex16_vector FRAME_FORM::get_int16(){
     int len = buf.size();
     for (int i = 0; i < len; i++){
-        buf[i] *= config["mult"];
-        int16_buf[i] = std::complex<int16_t>(buf[i]);
+        int16_buf[i] = std::complex<int16_t>(buf[i]*complex_double(config["mult"]));
         // frame_int16_buf[i] *= 16;
     }
     return int16_buf;
