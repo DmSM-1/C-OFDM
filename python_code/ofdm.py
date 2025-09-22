@@ -13,14 +13,23 @@ try:
 except Exception as e:
     print('Error loading data/data.bin:', e)
 
-# -------- t2_sin_corr.bin --------
+
 try:
-    corr = np.fromfile('data/t2_sin_corr.bin', dtype=np.float64)
-    x_corr = np.linspace(0, arr_data.size, corr.size)
-    axs[1].plot(x_corr, corr)
-    axs[1].set_title('T2 Sin Correlation')
+    arr_data = np.fromfile('data/row_data.bin', dtype=np.float64)
+    arr_data = arr_data[::2] + 1j * arr_data[1::2]
+    axs[1].plot(np.abs(arr_data))
+    axs[1].set_title('Data from SDR')
 except Exception as e:
-    print('Error loading data/t2_sin_corr.bin:', e)
+    print('Error loading data/data.bin:', e)
+
+# -------- t2_sin_corr.bin --------
+# try:
+#     corr = np.fromfile('data/t2_sin_corr.bin', dtype=np.float64)
+#     x_corr = np.linspace(0, arr_data.size, corr.size)
+#     axs[1].plot(x_corr, corr)
+#     axs[1].set_title('T2 Sin Correlation')
+# except Exception as e:
+#     print('Error loading data/t2_sin_corr.bin:', e)
 
 # -------- constell.bin --------
 try:
@@ -48,6 +57,6 @@ except Exception as e:
 plt.tight_layout()
 
 # Отображение графиков
-plt.show(block=True)
-# plt.pause(3)      # окно открыто 3 секунды
-# plt.close(fig)    # закрытие окна
+plt.show(block=False)
+plt.pause(1)      # окно открыто 3 секунды
+plt.close(fig)    # закрытие окна

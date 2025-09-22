@@ -45,11 +45,8 @@ int main(){
         fwrite(origin_mes.data(), 1, origin_mes.size(), res_file);
         fclose(res_file);
 
-        // break;
 
     }
-
-    sleep(100);
 
     fclose(file);
     
