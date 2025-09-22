@@ -39,7 +39,8 @@ try:
     arr_phase = np.fromfile('data/phases.bin', dtype=np.float64)
     arr_phase = arr_phase[::2] + 1j * arr_phase[1::2]
     axs[3].plot(np.angle(arr_phase))
-    axs[3].set_title('Phases')
+    # axs[3].set_title('Phases')
+    axs[3].plot(np.abs(arr_phase))
 except Exception as e:
     print('Error loading data/phases.bin:', e)
 
@@ -47,6 +48,6 @@ except Exception as e:
 plt.tight_layout()
 
 # Отображение графиков
-plt.show(block=False)
-plt.pause(3)      # окно открыто 3 секунды
-plt.close(fig)    # закрытие окна
+plt.show(block=True)
+# plt.pause(3)      # окно открыто 3 секунды
+# plt.close(fig)    # закрытие окна

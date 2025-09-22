@@ -172,7 +172,8 @@ public:
         cfg_ad9361_streaming_ch(&rx_cfg, RX, 0);
 
         char hardwaregain[16];
-        snprintf(hardwaregain, 16, "%.6lf dB", (double)config["hardwaregain"]);
+        snprintf(hardwaregain, 16, "%.6lf", (double)config["hardwaregain"]);
+        // snprintf(hardwaregain, 16, "%.6lf dB", (double)config["hardwaregain"]);
 
         struct iio_device* phy = iio_context_find_device(sdr_ctx, "ad9361-phy");
         struct iio_channel* phy_voltage0 = iio_device_find_channel(phy, "voltage0", false);

@@ -354,7 +354,7 @@ public:
     complex_vector ofdm_preamble;
     complex_vector conjected_sinh_part;
     std::vector<double> cor;
-    complex_vector phases;
+    complex_vector chan_est;
 
     PREAMBLE_FORM(ConfigMap& config);
     void set(complex_double* buf_ptr);
@@ -362,16 +362,63 @@ public:
     void find_corr(complex_vector& input, int start);
     int find_preamble(complex_vector& input, int start);
 
-    complex_vector phase_shift(){
+    complex_vector chan_char(){
         auto pr = fft();
-        std::fill(phases.begin(), phases.end(), complex_double(0.0, 0.0));
+        std::fill(chan_est.begin(), chan_est.end(), complex_double(0.0, 0.0));
         for (int i = 0; i < num_data_subc*num_symb; i++){
-            phases[i%num_data_subc] += pr[i]/mod_preamble[i];
+            chan_est[i%num_data_subc] += pr[i]/mod_preamble[i];
         }
         for (int i = 0; i < num_data_subc; i++){
-            phases[i] /= complex_double(num_symb, 0);
+            chan_est[i] /= complex_double(num_symb, 0);
         }
-        return phases;
+        return chan_est;
+    }
+
+        complex_vector chan_char_lq(){
+        auto pr = fft();
+
+        double mean_x   = 0.0;
+        double mean_y   = 0.0;
+        double mean_xy  = 0.0;
+        double mean_x2  = 0.0;
+        double a        = 0.0;
+        double b        = 0.0;
+
+        std::fill(chan_est.begin(), chan_est.end(), complex_double(0.0, 0.0));
+        
+        std::vector<double> phase(chan_est.size()/2, 0.0);
+
+        for (int i = 0; i < phase.size(); i++){
+            phase[i] = std::arg(pr[i]/mod_preamble[i]);
+        }
+
+        for (int i = 1; i < phase.size(); i++) {
+            double phase_diff = phase[i] - phase[i-1];
+            if (phase_diff > M_PI) {
+                phase[i] -= 2 * M_PI;
+            } else if (phase_diff < -M_PI) {
+                phase[i] += 2 * M_PI;
+            }
+        }
+
+        for(int i = 0; i < phase.size(); i++){
+            mean_xy += phase[i]*i;
+            mean_x2 += i*i;
+            mean_x += i;
+            mean_y += phase[i];
+        }
+        b = (mean_xy - mean_x*mean_y)/(mean_x2 - mean_x*mean_x);
+        a = mean_y - b*mean_x;
+        
+        for(int i = 0; i < chan_est.size()/2; i++){
+            chan_est[i] = std::exp(complex_double(0, b*i+a));
+        }
+        for(int i = chan_est.size()/2; i < chan_est.size(); i++){
+            chan_est[i] = std::exp(complex_double(0, -b*chan_est.size()/2+(i-chan_est.size()/2)*b+a));
+        }
+
+
+        return chan_est;
     }
     
 

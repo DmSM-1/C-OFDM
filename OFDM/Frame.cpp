@@ -154,7 +154,7 @@ OFDM_FORM::OFDM_FORM(ConfigMap& config, bool data, bool with_preamble)
           num_symb((with_preamble)?config["num_symb"]+config["num_pr_symb"]:(data)?config["num_symb"]:config["num_pr_symb"]),
           pr_sin_len(config["pr_sin_len"]),
           pr_seed(config["pr_seed"]),
-          modType(static_cast<mod_type>(config["modType"])),
+          modType((data)?static_cast<mod_type>(config["modType"]):mod_type(1)),
           ofdm_len(fft_size+cp_size),
           size((fft_size+cp_size)*num_symb),
           usefull_size(num_data_subc*num_symb),
@@ -255,7 +255,7 @@ PREAMBLE_FORM::PREAMBLE_FORM(ConfigMap& config)
     ofdm_preamble(size, complex_double(0,0)),
     conjected_sinh_part(pr_sin_len, complex_double(0,0)),
     cor((int)config["T2sin_size"]*2 + pr_sin_len, 0.0),
-    phases(num_data_subc, complex_double(0,0))
+    chan_est(num_data_subc, complex_double(0,0))
 {
     std::mt19937 rng(pr_seed);
     std::uniform_int_distribution<int> dist(0, 255);

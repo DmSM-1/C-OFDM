@@ -34,9 +34,7 @@ int main(){
     tx_frame.write(origin_mes);
     
     auto mod_data   = tx_frame.get();
-    auto tx_data    = tx_frame.get_int16();
-  
-    std::copy(tx_frame.int16_buf.begin(), tx_frame.int16_buf.end(), rx_frame.from_sdr_int16_buf.begin());    
+    auto tx_data    = tx_frame.get_int16();  
 
     tx_sdr.send(tx_data);
     rx_sdr.recv(rx_frame.from_sdr_int16_buf);
@@ -45,18 +43,8 @@ int main(){
     
     auto t2_sin_corr = rx_frame.t2sin.corr(rx_frame.from_sdr_buf);
     auto t2_sin_begin = rx_frame.t2sin.find_t2sin(rx_frame.from_sdr_buf, 0);
-
-    write_complex_to_file("data/data.bin", rx_frame.from_sdr_buf);
-    write_complex_to_file("data/spec.bin", rx_frame.t2sin.detect_buf);
-    write_double_to_file("data/t2_sin_corr.bin", t2_sin_corr);
-    write_complex_to_file("data/row.bin", rx_frame.from_sdr_buf.begin()+t2_sin_begin, rx_frame.from_sdr_buf.begin()+t2_sin_begin+rx_frame.output_size);
     
-    rx_frame.preamble.find_corr(rx_frame.from_sdr_buf, t2_sin_begin);
     auto pr_begin = rx_frame.preamble.find_preamble(rx_frame.from_sdr_buf, t2_sin_begin)+1;
-
-    write_double_to_file("data/pr_corr.bin", rx_frame.preamble.cor);
-
-    // std::cout<<"BEGIN: "<<t2_sin_begin<<" "<<pr_begin<<"\n";
 
     std::copy(
         rx_frame.from_sdr_buf.begin()+t2_sin_begin+pr_begin-rx_frame.t2sin.size, 
@@ -68,28 +56,21 @@ int main(){
     rx_frame.message_with_preamble.cp_freq_sinh();
     rx_frame.message_with_preamble.pr_phase_sinh(rx_frame.preamble.ofdm_preamble.data(), rx_frame.preamble.size);
 
-    write_complex_to_file("data/row.bin", rx_frame.buf.begin()+rx_frame.t2sin.size, rx_frame.buf.end());
-    write_complex_to_file("data/source.bin", tx_frame.buf.begin()+tx_frame.t2sin.size, tx_frame.buf.end());
-
-    auto constell = rx_frame.message_with_preamble.fft();
-
-    auto phases = rx_frame.preamble.phase_shift();
-    write_complex_to_file("data/phases.bin", phases);
-
+    // rx_frame.preamble.chan_char_lq();
+    auto chan_char = rx_frame.preamble.chan_char_lq();
+    auto constell = rx_frame.message.fft();
+    
     for (int i = 0; i < constell.size(); i++){
-        constell[i] /= phases[i%phases.size()];
+        constell[i] /= chan_char[i%chan_char.size()];
     }
     
+    write_complex_to_file("data/source.bin", tx_frame.int16_buf);
+    write_complex_to_file("data/data.bin", rx_frame.from_sdr_buf);
+    write_double_to_file("data/t2_sin_corr.bin", t2_sin_corr);
+    write_complex_to_file("data/phases.bin", chan_char);
     write_complex_to_file("data/constell.bin", constell);
 
-    auto res_data = rx_frame.message.fft();
-
-    for (int i = 0; i < res_data.size(); i++){
-        res_data[i] /= phases[i%phases.size()];
-    }
-    
-    auto res = rx_frame.message.Mod.demod(res_data);
-
+    auto res = rx_frame.message.Mod.demod(constell);
 
 
     res.resize(rx_frame.usefull_size);
