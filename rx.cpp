@@ -23,23 +23,52 @@ int main(){
     MAC mac(1, 0, rx_frame.usefull_size);
     SDR rx_sdr(1, rx_frame.output_size, "config/config.txt");
 
+    // rx_sdr.recv(rx_frame.from_sdr_int16_buf.data()+rx_frame.output_size);
+
+    rx_sdr.recv(rx_frame.from_sdr_int16_buf.data()+rx_frame.output_size);
+    rx_frame.form_int16_to_double();
+
+    int pos = 0;
+    int threshold = rx_frame.from_sdr_buf.size()-rx_frame.output_size;
+
     for(int i = 0; i < 1000; i++){
 
-        rx_sdr.recv(rx_frame.from_sdr_int16_buf);
+        // if (pos > threshold){
+        //     pos = 0;
+        //     rx_sdr.recv(rx_frame.from_sdr_int16_buf.data()+rx_frame.output_size);
+        //     rx_frame.form_int16_to_double();
+        // }
         
-        rx_frame.form_int16_to_double();
-        
-        auto t2_sin_begin = rx_frame.t2sin.find_t2sin(rx_frame.from_sdr_buf, 0);
+        pos = rx_frame.t2sin.find_t2sin(rx_frame.from_sdr_buf, pos);
 
-        if (t2_sin_begin == -1)
+        if (pos == -1){
+            std::cout<<"empty\n";
+            pos = 0;
+            rx_sdr.recv(rx_frame.from_sdr_int16_buf.data()+rx_frame.output_size);
+            rx_frame.form_int16_to_double();
             continue;
-        
-        auto pr_begin = rx_frame.preamble.find_preamble(rx_frame.from_sdr_buf, t2_sin_begin)+1;
+        }
+
+        if (pos >= threshold){
+            std::copy(rx_frame.from_sdr_int16_buf.begin()+threshold, 
+            rx_frame.from_sdr_int16_buf.end(), 
+            rx_frame.from_sdr_int16_buf.begin());
+
+            rx_sdr.recv(rx_frame.from_sdr_int16_buf.data()+rx_frame.output_size);
+            rx_frame.form_int16_to_double();
+
+            pos -= threshold;
+        }
+
+        pos = rx_frame.preamble.find_preamble(rx_frame.from_sdr_buf, pos)+1;
+        std::cout<<pos<<" "<<threshold<<"\n";
 
         std::copy(
-            rx_frame.from_sdr_buf.begin()+t2_sin_begin+pr_begin-rx_frame.t2sin.size, 
-            rx_frame.from_sdr_buf.begin()+t2_sin_begin+pr_begin-rx_frame.t2sin.size+rx_frame.output_size, 
+            rx_frame.from_sdr_buf.begin()+pos-rx_frame.t2sin.size, 
+            rx_frame.from_sdr_buf.begin()+pos-rx_frame.t2sin.size+rx_frame.output_size, 
             rx_frame.buf.begin());
+
+        pos += rx_frame.message.size;
         
         auto freq_shift = rx_frame.message_with_preamble.pilot_freq_sinh();
         rx_frame.message_with_preamble.freq_shift(freq_shift);
@@ -53,11 +82,11 @@ int main(){
             constell[i] /= chan_char[i%chan_char.size()];
         }
 
-        // write_complex_to_file("data/data.bin", rx_frame.from_sdr_buf);
-        // write_complex_to_file("data/row_data.bin", rx_frame.buf);
-        // write_complex_to_file("data/phases.bin", chan_char);
-        // write_complex_to_file("data/constell.bin", constell);
-        // system("python3 python_code/ofdm.py");
+        write_complex_to_file("data/data.bin", rx_frame.from_sdr_buf);
+        write_complex_to_file("data/row_data.bin", rx_frame.buf);
+        write_complex_to_file("data/phases.bin", chan_char);
+        write_complex_to_file("data/constell.bin", constell);
+        system("python3 python_code/ofdm.py");
 
         auto res_ofdm = rx_frame.message.Mod.demod(constell);
         auto res = mac.read(res_ofdm);

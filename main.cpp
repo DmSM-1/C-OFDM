@@ -42,7 +42,6 @@ int main(){
     auto tx_data    = tx_frame.get_int16();  
 
     tx_sdr.send(tx_data);
-    tx_sdr.send(tx_data);
     rx_sdr.recv(rx_frame.from_sdr_int16_buf);
     
     rx_frame.form_int16_to_double();
@@ -53,8 +52,8 @@ int main(){
     auto pr_begin = rx_frame.preamble.find_preamble(rx_frame.from_sdr_buf, t2_sin_begin)+1;
 
     std::copy(
-        rx_frame.from_sdr_buf.begin()+t2_sin_begin+pr_begin-rx_frame.t2sin.size, 
-        rx_frame.from_sdr_buf.begin()+t2_sin_begin+pr_begin-rx_frame.t2sin.size+rx_frame.output_size, 
+        rx_frame.from_sdr_buf.begin()+pr_begin-rx_frame.t2sin.size, 
+        rx_frame.from_sdr_buf.begin()+pr_begin-rx_frame.t2sin.size+rx_frame.output_size, 
         rx_frame.buf.begin());
     
     auto freq_shift = rx_frame.message_with_preamble.pilot_freq_sinh();

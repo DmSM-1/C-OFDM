@@ -209,7 +209,7 @@ FRAME_FORM::FRAME_FORM(const std::string& CONFIGNAME)
         message_with_preamble(config, true, true),
         buf(t2sin.size+preamble.size+message.size, complex_double(0.0, 0.0)),
         int16_buf(buf.size()),
-        from_sdr_buf(buf.size()*config["rx_buf_size"], complex_double(0.0, 0.0)),
+        from_sdr_buf(buf.size()*(config["rx_buf_size"]+1), complex_double(0.0, 0.0)),
         from_sdr_int16_buf(from_sdr_buf.size()),
         usefull_size(message.usefull_size*message.modType/8),
         output_size(buf.size()),
@@ -353,7 +353,7 @@ int PREAMBLE_FORM::find_preamble(complex_vector& input, int start){
                 energy += input_ptr[j]*conjected_sinh_part[j];
             
             if (std::abs(energy)/std::sqrt(norm) > level)
-                return i;
+                return i+start;
         }
 
         re = input_ptr[pr_sin_len].real();
