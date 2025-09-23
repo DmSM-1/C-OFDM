@@ -28,10 +28,13 @@ int main(){
     rx_sdr.recv(rx_frame.from_sdr_int16_buf.data()+rx_frame.output_size);
     rx_frame.form_int16_to_double();
 
+    char stat[64] = "data/stat.txt";
+    FILE* stat_file = fopen(stat, "w");
+
     int pos = 0;
     int threshold = rx_frame.from_sdr_buf.size()-rx_frame.output_size;
 
-    for(int i = 0; i < 1000; i++){
+    for(int i = 0; i < 10000; i++){
 
         // if (pos > threshold){
         //     pos = 0;
@@ -42,8 +45,8 @@ int main(){
         pos = rx_frame.t2sin.find_t2sin(rx_frame.from_sdr_buf, pos);
 
         if (pos == -1){
-            std::cout<<"empty\n";
-            pos = 0;
+            // std::cout<<"empty\n";
+            pos = rx_frame.output_size;
             rx_sdr.recv(rx_frame.from_sdr_int16_buf.data()+rx_frame.output_size);
             rx_frame.form_int16_to_double();
             continue;
@@ -61,7 +64,18 @@ int main(){
         }
 
         pos = rx_frame.preamble.find_preamble(rx_frame.from_sdr_buf, pos)+1;
-        std::cout<<pos<<" "<<threshold<<"\n";
+        // std::cout<<pos<<" "<<threshold<<" ";
+
+        if (pos >= threshold+rx_frame.t2sin.size){
+            std::copy(rx_frame.from_sdr_int16_buf.begin()+threshold, 
+            rx_frame.from_sdr_int16_buf.end(), 
+            rx_frame.from_sdr_int16_buf.begin());
+
+            rx_sdr.recv(rx_frame.from_sdr_int16_buf.data()+rx_frame.output_size);
+            rx_frame.form_int16_to_double();
+
+            pos -= threshold;
+        }
 
         std::copy(
             rx_frame.from_sdr_buf.begin()+pos-rx_frame.t2sin.size, 
@@ -82,11 +96,11 @@ int main(){
             constell[i] /= chan_char[i%chan_char.size()];
         }
 
-        write_complex_to_file("data/data.bin", rx_frame.from_sdr_buf);
-        write_complex_to_file("data/row_data.bin", rx_frame.buf);
-        write_complex_to_file("data/phases.bin", chan_char);
-        write_complex_to_file("data/constell.bin", constell);
-        system("python3 python_code/ofdm.py");
+        // write_complex_to_file("data/data.bin", rx_frame.from_sdr_buf);
+        // write_complex_to_file("data/row_data.bin", rx_frame.buf);
+        // write_complex_to_file("data/phases.bin", chan_char);
+        // write_complex_to_file("data/constell.bin", constell);
+        // system("python3 python_code/ofdm.py");
 
         auto res_ofdm = rx_frame.message.Mod.demod(constell);
         auto res = mac.read(res_ofdm);
@@ -129,11 +143,11 @@ int main(){
         }
         bit_acc /= sz*8;
             
-        printf("FRAME FROM %3d TO %3d SEQ_NUM %5d ACCURACY %.5lf %.5lf\n", mac.input_tx_id, mac.input_rx_id, mac.input_seq_num, acc, bit_acc);
+        fprintf(stat_file ,"FRAME FROM %3d TO %3d SEQ_NUM %5d ACCURACY %.5lf %.5lf\n", mac.input_tx_id, mac.input_rx_id, mac.input_seq_num, acc, bit_acc);
         
-        
-
     }
+
+    fclose(stat_file);
     
     return 0;
 }
