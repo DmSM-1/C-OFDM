@@ -57,6 +57,7 @@ except Exception as e:
 plt.tight_layout()
 
 # Отображение графиков
-plt.show(block=False)
-plt.pause(1)      # окно открыто 3 секунды
-plt.close(fig)    # закрытие окна
+plt.show(block=True)
+# plt.show(block=False)
+# plt.pause(1)      # окно открыто 3 секунды
+# plt.close(fig)    # закрытие окна

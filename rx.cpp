@@ -32,20 +32,15 @@ int main(){
     FILE* stat_file = fopen(stat, "w");
 
     int pos = 0;
+    int preamble_begin;
     int threshold = rx_frame.from_sdr_buf.size()-rx_frame.output_size;
 
     for(int i = 0; i < 10000; i++){
-
-        // if (pos > threshold){
-        //     pos = 0;
-        //     rx_sdr.recv(rx_frame.from_sdr_int16_buf.data()+rx_frame.output_size);
-        //     rx_frame.form_int16_to_double();
-        // }
         
         pos = rx_frame.t2sin.find_t2sin(rx_frame.from_sdr_buf, pos);
 
         if (pos == -1){
-            // std::cout<<"empty\n";
+            // std::cout<<"empty "<<i<<"\n";
             pos = rx_frame.output_size;
             rx_sdr.recv(rx_frame.from_sdr_int16_buf.data()+rx_frame.output_size);
             rx_frame.form_int16_to_double();
@@ -53,6 +48,7 @@ int main(){
         }
 
         if (pos >= threshold){
+            // std::cout<<"refresh "<<i<<"\n";
             std::copy(rx_frame.from_sdr_int16_buf.begin()+threshold, 
             rx_frame.from_sdr_int16_buf.end(), 
             rx_frame.from_sdr_int16_buf.begin());
@@ -63,8 +59,22 @@ int main(){
             pos -= threshold;
         }
 
-        pos = rx_frame.preamble.find_preamble(rx_frame.from_sdr_buf, pos)+1;
-        // std::cout<<pos<<" "<<threshold<<" ";
+        preamble_begin = rx_frame.preamble.find_preamble(rx_frame.from_sdr_buf, pos)+1;
+
+        if (preamble_begin < -2){
+            // printf("detect error %d\n", i);
+            pos += rx_frame.message.size;
+            continue;
+        }
+        pos = preamble_begin;
+        
+        if (pos == -1){
+            // std::cout<<"empty "<<i<<"\n";
+            pos = rx_frame.output_size;
+            rx_sdr.recv(rx_frame.from_sdr_int16_buf.data()+rx_frame.output_size);
+            rx_frame.form_int16_to_double();
+            continue;
+        }
 
         if (pos >= threshold+rx_frame.t2sin.size){
             std::copy(rx_frame.from_sdr_int16_buf.begin()+threshold, 
@@ -78,9 +88,9 @@ int main(){
         }
 
         std::copy(
-            rx_frame.from_sdr_buf.begin()+pos-rx_frame.t2sin.size, 
+            rx_frame.from_sdr_buf.begin()+pos, 
             rx_frame.from_sdr_buf.begin()+pos-rx_frame.t2sin.size+rx_frame.output_size, 
-            rx_frame.buf.begin());
+            rx_frame.buf.begin()+rx_frame.t2sin.size);
 
         pos += rx_frame.message.size;
         
@@ -92,15 +102,17 @@ int main(){
         auto chan_char = rx_frame.preamble.chan_char_lq();
         auto constell = rx_frame.message.fft();
         
-        for (int i = 0; i < constell.size(); i++){
-            constell[i] /= chan_char[i%chan_char.size()];
+        for (int j = 0; j < constell.size(); j++){
+            constell[j] /= chan_char[j%chan_char.size()];
         }
 
-        // write_complex_to_file("data/data.bin", rx_frame.from_sdr_buf);
-        // write_complex_to_file("data/row_data.bin", rx_frame.buf);
-        // write_complex_to_file("data/phases.bin", chan_char);
-        // write_complex_to_file("data/constell.bin", constell);
-        // system("python3 python_code/ofdm.py");
+        // if (i == 999){
+        //     write_complex_to_file("data/data.bin", rx_frame.from_sdr_buf);
+        //     write_complex_to_file("data/row_data.bin", rx_frame.buf);
+        //     write_complex_to_file("data/phases.bin", chan_char);
+        //     write_complex_to_file("data/constell.bin", constell);
+        //     system("python3 python_code/ofdm.py");
+        // }
 
         auto res_ofdm = rx_frame.message.Mod.demod(constell);
         auto res = mac.read(res_ofdm);
@@ -117,7 +129,7 @@ int main(){
         sprintf(tx_filename, "frames/frame_%d.txt", mac.input_seq_num);
         std::ifstream tx_file(tx_filename, std::ios::binary);
         if (!tx_file) {
-            std::cerr << "Cannot open " << tx_filename << "\n";
+            printf("FRAME FROM %3d TO %3d SEQ_NUM %5d ITER %6d POS %6d\n", mac.input_tx_id, mac.input_rx_id, mac.input_seq_num, i, pos);
             continue;
         }
         bit_vector origin_mes((std::istreambuf_iterator<char>(tx_file)),
@@ -143,11 +155,12 @@ int main(){
         }
         bit_acc /= sz*8;
             
-        fprintf(stat_file ,"FRAME FROM %3d TO %3d SEQ_NUM %5d ACCURACY %.5lf %.5lf\n", mac.input_tx_id, mac.input_rx_id, mac.input_seq_num, acc, bit_acc);
-        
+        printf("FRAME FROM %3d TO %3d SEQ_NUM %5d ACCURACY %.5lf %.5lf ITER %6d\n", mac.input_tx_id, mac.input_rx_id, mac.input_seq_num, acc, bit_acc, i, pos);
+        fprintf(stat_file ,"FRAME FROM %3d TO %3d SEQ_NUM %5d ACCURACY %.5lf %.5lf ITER %6d\n", mac.input_tx_id, mac.input_rx_id, mac.input_seq_num, acc, bit_acc, i);
     }
 
     fclose(stat_file);
+    printf("\n");
     
     return 0;
 }

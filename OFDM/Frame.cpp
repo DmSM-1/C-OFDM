@@ -45,6 +45,12 @@ FFT_FORM::FFT_FORM(int fft_size,int num_data_subc,int num_pilot_subc, int num_sy
 }
 
 
+FFT_FORM::~FFT_FORM(){
+    fftw_destroy_plan(backward_plan);
+    fftw_destroy_plan(forward_plan);
+}
+
+
 void FFT_FORM::write(complex_vector& input){
     std::fill(FFT_buf.begin(), FFT_buf.end(), complex_double(0));
     for(auto &i : pilot)
@@ -67,7 +73,6 @@ void FFT_FORM::write(complex_vector& input){
 complex_vector& FFT_FORM::read(){
     fftw_execute(forward_plan);
 
-    
     double phys_pilot_ampl = 0.0;
     for(auto &i : pilot)
         phys_pilot_ampl += std::abs(*i);
@@ -365,5 +370,5 @@ int PREAMBLE_FORM::find_preamble(complex_vector& input, int start){
         norm -= re*re+im*im;
     }
 
-    return 0;
+    return -10;
 }

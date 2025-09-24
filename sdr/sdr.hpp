@@ -1,5 +1,6 @@
 #include <iio.h>
 #include <stdio.h>
+#include <unistd.h>
 #include "../config/parser.hpp"
 
 
@@ -189,7 +190,11 @@ public:
         iio_channel_enable(rx0_q);
 
         rxbuf = iio_device_create_buffer(rx_sdr, rx_buf_size, false);
-    }    
+    }  
+    
+    ~SDR(){
+        iio_context_destroy(sdr_ctx);
+    }
 
 
     void send(complex16_vector& buf){
@@ -207,6 +212,7 @@ public:
         }
 
         iio_buffer_push(txbuf);
+        // usleep((int)config["tx_time_int"]);
 
     }
 
@@ -215,7 +221,7 @@ void recv(complex16_vector& buf) {
 
     ssize_t ret = iio_buffer_refill(rxbuf);
 
-    buf.resize(rx_buf_size);
+    // buf.resize(rx_buf_size);
     char *p_dat, *p_end;
     ptrdiff_t p_inc;
 
@@ -225,7 +231,7 @@ void recv(complex16_vector& buf) {
     p_inc = iio_buffer_step(rxbuf);
 
     size_t i = 0;
-    while (p_dat < p_end && i < buf.size()) {
+    while (p_dat < p_end && i < rx_buf_size) {
         buf[i] = std::complex<int16_t>(((int16_t*)p_dat)[0], ((int16_t*)p_dat)[1]);
 
         p_dat += p_inc;
@@ -233,6 +239,27 @@ void recv(complex16_vector& buf) {
     }
 }
 
+
+void recv(std::complex<int16_t>* buf) {
+
+    ssize_t ret = iio_buffer_refill(rxbuf);
+
+    char *p_dat, *p_end;
+    ptrdiff_t p_inc;
+
+
+    p_dat = (char *) iio_buffer_start(rxbuf);
+    p_end = (char *) iio_buffer_end(rxbuf);
+    p_inc = iio_buffer_step(rxbuf);
+
+    size_t i = 0;
+    while (p_dat < p_end && i < rx_buf_size) {
+        buf[i] = std::complex<int16_t>(((int16_t*)p_dat)[0], ((int16_t*)p_dat)[1]);
+
+        p_dat += p_inc;
+        i++;
+    }
+}
     
 
 };

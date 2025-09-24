@@ -10,7 +10,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <iterator>
-#include <Python.h>
 
 
 template <typename Iter>

@@ -49,6 +49,7 @@ public:
     double pilot_ampl;
 
     FFT_FORM(int fft_size,int num_data_subc,int num_pilot_subc, int num_symb, double pilot_ampl = 1.0);
+    ~FFT_FORM();
     void write(complex_vector& input);
     complex_vector& read();
 };

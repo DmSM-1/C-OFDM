@@ -9,7 +9,6 @@
 #include "OFDM/Frame.hpp"
 #include "sdr/sdr.hpp"
 #include <thread>
-#include <thread>
 #include <unistd.h>
 #include <fcntl.h>
 #include <iterator>
@@ -22,13 +21,11 @@ int main(){
     FRAME_FORM tx_frame("config/config.txt");
     FRAME_FORM rx_frame("config/config.txt");
 
-    MAC mac(1, 0, rx_frame.usefull_size);
+    MAC mac(1, 0, tx_frame.usefull_size);
     SDR tx_sdr(0, tx_frame.output_size, "config/config.txt");
 
     bit_vector origin_mes(mac.payload);
     FILE* file = fopen("WARANDPEACE.txt", "r");
-
-    fread(origin_mes.data(), 1, origin_mes.size(), file);
     
     while (fread(origin_mes.data(), 1, origin_mes.size(), file)){    
 
@@ -38,7 +35,6 @@ int main(){
         auto tx_data = rx_frame.get_int16();  
         
         tx_sdr.send(tx_data);
-        usleep(1000);
         char filename[64] = {0};
         sprintf(filename, "frames/frame_%d.txt", mac.seq_num);
         FILE* res_file = fopen(filename, "w");
