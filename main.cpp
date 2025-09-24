@@ -42,6 +42,7 @@ int main(){
     auto tx_data    = tx_frame.get_int16();  
 
     tx_sdr.send(tx_data);
+    tx_sdr.send(tx_data);
     rx_sdr.recv(rx_frame.from_sdr_int16_buf);
     
     rx_frame.form_int16_to_double();

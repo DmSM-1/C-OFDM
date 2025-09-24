@@ -212,7 +212,7 @@ public:
         }
 
         iio_buffer_push(txbuf);
-        // usleep((int)config["tx_time_int"]);
+        usleep((int)config["tx_time_int"]);
 
     }
 

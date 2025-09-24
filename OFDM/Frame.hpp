@@ -375,7 +375,7 @@ public:
         return chan_est;
     }
 
-        complex_vector chan_char_lq(){
+    complex_vector& chan_char_lq(){
         auto pr = fft();
 
         double mean_x   = 0.0;
