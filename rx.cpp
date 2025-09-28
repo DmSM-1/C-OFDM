@@ -26,15 +26,16 @@ int main(){
     rx_sdr.recv(rx_frame.from_sdr_int16_buf.data()+rx_frame.output_size);
     rx_frame.form_int16_to_double();
 
-    char stat[64] = "data/log.txt";
-    FILE* log_file = fopen(stat, "w");
-
     int pos = 0;
     int preamble_begin;
     int threshold = rx_frame.from_sdr_buf.size()-rx_frame.output_size;
 
-    for(int i = 0; i < 10000; i++){
+    FILE* res_file = fopen("Res.wav", "wb");
+
+    for(int i = 0; i < 300000; i++){
         
+        printf("\r%6d", i);
+
         pos = rx_frame.t2sin.find_t2sin(rx_frame.from_sdr_buf, pos);
 
         if (pos == -1){
@@ -107,29 +108,10 @@ int main(){
         auto res_ofdm = rx_frame.message.Mod.demod(constell);
         auto res = mac.read(res_ofdm);
         
-
-        char filename[64] = {0};
-        sprintf(filename, "frames/rx_frame_%d.txt", mac.input_seq_num);
-        FILE* res_file = fopen(filename, "w");
         fwrite(res.data(), 1, res.size(), res_file);
-        fclose(res_file);
-
-        fprintf(log_file, "FRAME FROM %5d TO %5d SEQ_NUM %5d ITER %6d\n", mac.input_tx_id, mac.input_rx_id, mac.input_seq_num, i);
         
-        char tx_filename[64];
-        sprintf(tx_filename, "frames/frame_%d.txt", mac.input_seq_num);
-        std::ifstream tx_file(tx_filename, std::ios::binary);
-        if (!tx_file) {
-            continue;
-        }
-        bit_vector origin_mes((std::istreambuf_iterator<char>(tx_file)),
-        std::istreambuf_iterator<char>());
-        tx_file.close();
-        
- }
-
-    fclose(log_file);
-    printf("\n");
+    }
+    fclose(res_file);
     
     return 0;
 }

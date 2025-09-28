@@ -27,7 +27,7 @@ int main(){
     SDR tx_sdr(0, tx_frame.output_size, "config/config.txt");
 
     bit_vector origin_mes(mac.payload);
-    FILE* file = fopen("WARANDPEACE.txt", "r");
+    FILE* file = fopen("FlyMeToTheMoon_mono.wav", "rb");
     
     while (fread(origin_mes.data(), 1, origin_mes.size(), file)){    
 
@@ -37,13 +37,6 @@ int main(){
         auto tx_data = rx_frame.get_int16();  
         
         tx_sdr.send(tx_data);
-        char filename[64] = {0};
-        sprintf(filename, "frames/frame_%d.txt", mac.seq_num);
-        FILE* res_file = fopen(filename, "w");
-        fwrite(origin_mes.data(), 1, origin_mes.size(), res_file);
-        fclose(res_file);
-
-
     }
 
     fclose(file);

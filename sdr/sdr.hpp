@@ -48,7 +48,6 @@ private:
     struct iio_buffer  *rxbuf = nullptr;
 
     size_t sdr_buffer_capacity;
-    size_t rx_buf_size;
 
 
     void shutdown(void){
@@ -133,6 +132,8 @@ private:
     }
 
 public:
+    size_t rx_buf_size;
+
     SDR(int device_num, size_t sdr_buffer_capacity, const std::string& CONFIGNAME)
     :   config(parse_config(CONFIGNAME)),
         mult(config["mult"]),
