@@ -62,12 +62,14 @@ int main(){
     rx_frame.message_with_preamble.cp_freq_sinh();
     rx_frame.message_with_preamble.pr_phase_sinh(rx_frame.preamble.ofdm_preamble.data(), rx_frame.preamble.size);
 
+
     auto chan_char = rx_frame.preamble.chan_char_lq();
     auto constell = rx_frame.message.fft();
     
     for (int i = 0; i < constell.size(); i++){
         constell[i] /= chan_char[i%chan_char.size()];
     }
+    
     
     write_complex_to_file("data/source.bin", tx_frame.int16_buf);
     write_complex_to_file("data/data.bin", rx_frame.from_sdr_buf);
@@ -79,23 +81,25 @@ int main(){
 
     auto res = mac.read(res_ofdm);
 
+    std::cout<< res.size() << " " << origin_mes.size() << "\n";
+
     double acc = 0.0;
-    for (int i = 0; i < rx_frame.usefull_size; i++){
+    for (int i = 0; i < res.size(); i++){
         acc += double(res[i]==origin_mes[i]);
     }
-    acc /= rx_frame.usefull_size;
+    acc /= res.size();
     
     std::cout<<"FRAME FROM "<<mac.input_tx_id<<" TO "<<mac.input_rx_id<<" SEQ "<<mac.input_seq_num<<'\n';
     std::cout<<"ACCURACY: "<< acc <<"\n";
 
     acc = 0.0;
-    for (int i = 0; i < rx_frame.usefull_size; i++) {
+    for (int i = 0; i < res.size(); i++) {
         uint8_t diff = res[i] ^ origin_mes[i];
         for (int b = 0; b < 8; b++) {
             acc += ((diff >> b) & 1) == 0;
         }
     }
-    acc /= (rx_frame.usefull_size * 8);
+    acc /= (res.size() * 8);
 
     std::cout << "Bit-level ACCURACY: " << acc << "\n";
 

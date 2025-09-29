@@ -36,8 +36,8 @@ try:
     arr_const = np.fromfile('data/constell.bin', dtype=np.float64)
     arr_const = arr_const[::2] + 1j * arr_const[1::2]
     axs[2].scatter(arr_const.real, arr_const.imag, s=1)
-    axs[2].set_xlim(-1.5, 1.5)
-    axs[2].set_ylim(-1.5, 1.5)
+    # axs[2].set_xlim(-1.5, 1.5)
+    # axs[2].set_ylim(-1.5, 1.5)
     axs[2].set_aspect('equal', 'box')
     axs[2].set_title('Constellation')
 except Exception as e:

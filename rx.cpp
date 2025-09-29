@@ -15,9 +15,16 @@
 #include <iterator>
 #include "io/io.hpp"
 #include "mac/mac_frame.hpp"
+#include <unistd.h>
+#include <time.h>
 
 
 int main(){
+
+    #define get_time(a) ((double)a.tv_sec+((double)a.tv_nsec)*1e-9)
+    #define time_dif(a,b) (get_time(b)-get_time(a))
+
+    static struct timespec ts[16];
     
     FRAME_FORM rx_frame("config/config.txt");
     MAC mac(1, 0, rx_frame.usefull_size);
@@ -32,9 +39,11 @@ int main(){
 
     FILE* res_file = fopen("Res.wav", "wb");
 
-    for(int i = 0; i < 300000; i++){
+    timespec_get(ts, TIME_UTC);
+
+    for(int i = 0; i < 10000; i++){
         
-        printf("\r%6d", i);
+        // printf("\r%6d", i);
 
         pos = rx_frame.t2sin.find_t2sin(rx_frame.from_sdr_buf, pos);
 
@@ -107,6 +116,10 @@ int main(){
 
         auto res_ofdm = rx_frame.message.Mod.demod(constell);
         auto res = mac.read(res_ofdm);
+
+        timespec_get(ts+1, TIME_UTC);
+
+        printf("SEQ NUM:%6d TIME: %lf\n", mac.input_seq_num, time_dif(ts[0], ts[1]));
         
         fwrite(res.data(), 1, res.size(), res_file);
         

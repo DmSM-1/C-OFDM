@@ -375,6 +375,8 @@ public:
         return chan_est;
     }
 
+
+
     complex_vector& chan_char_lq(){
         auto pr = fft();
 
