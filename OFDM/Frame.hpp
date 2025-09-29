@@ -238,18 +238,27 @@ public:
     void cp_freq_sinh(){
         complex_double phase;
         complex_double step;
-        complex_double shift;
+        complex_double shift = complex_double(1,0);
+        complex_double curent_shift;
         for (int i=0; i<size; i+= ofdm_len){
             phase = complex_double(0);
-            shift = complex_double(1,0);
+            curent_shift = complex_double(1,0);
+
+            for (int j = 0; j < ofdm_len; ++j){
+                output[0][i+j] *= shift;
+            }
+
             for (int j = 0; j < cp_size; j++){
                 phase += std::conj(output[0][i+j])*output[0][i+j+fft_size];
             }
             step = std::exp(-complex_double(0, 1)*(std::arg(phase)/fft_size));
-            for (int j = i; j < size; j++){
-                output[0][j] *= shift;
-                shift *= step;
+
+            for (int j = 0; j < ofdm_len; ++j){
+                output[0][i+j] *= curent_shift;
+                curent_shift *= step;
             }
+
+            shift *= curent_shift;
         }
     }
 
@@ -433,9 +442,9 @@ public:
 class FRAME_FORM{
 
 private:
-    ConfigMap config;
 
 public:
+    ConfigMap config;
     T2SIN_FORM      t2sin;
     PREAMBLE_FORM   preamble;
     OFDM_FORM       message;
@@ -462,10 +471,47 @@ public:
 
     void form_int16_to_double(){
 
-        std::transform( from_sdr_int16_buf.begin(), from_sdr_int16_buf.end(),
-                        from_sdr_buf.begin(),[](const std::complex<int16_t>& c){
-                   return std::complex<double>(c.real(), c.imag());
-               });
+        int len = from_sdr_int16_buf.size()*2;
+
+        int16_t* int_ptr    = (int16_t*)from_sdr_int16_buf.data();
+        double* double_ptr  = (double*)from_sdr_buf.data();
+
+        for(int i = 0; i < len; ++i){
+            double_ptr[i] = (double)int_ptr[i];
+        }
+
+        // __m128i in16;
+        // __m256i in32;
+
+        // __m128i lo;
+        // __m128i hi;
+
+        // __m256d d0;
+        // __m256d d1;
+
+        // for (int i = 0; i < len; i+=8){
+        //     in16 = _mm_loadu_si128((__m128i*)(int_ptr));
+        //     in32 = _mm256_cvtepi16_epi32(in16);
+
+        //     lo = _mm256_castsi256_si128(in32);     
+        //     hi = _mm256_extracti128_si256(in32, 1);
+
+        //     d0 = _mm256_cvtepi32_pd(lo);           
+        //     d1 = _mm256_cvtepi32_pd(hi);
+            
+        //     _mm256_storeu_pd(double_ptr, d0);
+        //     _mm256_storeu_pd(double_ptr+4, d1);
+
+        //     int_ptr += 8;
+        //     double_ptr += 8;
+        // }
+
+
+        // std::transform( 
+        //     from_sdr_int16_buf.begin(), from_sdr_int16_buf.end(),
+        //     from_sdr_buf.begin(),[](const std::complex<int16_t>& c){
+        //     return std::complex<double>(c.real(), c.imag());
+        // });
         
     }
     

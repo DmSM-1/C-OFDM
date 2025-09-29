@@ -18,7 +18,7 @@
 
 int main(){
     
-    usleep(100000);
+    usleep(200000);
 
     FRAME_FORM tx_frame("config/config.txt");
     FRAME_FORM rx_frame("config/config.txt");

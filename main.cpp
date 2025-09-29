@@ -57,7 +57,7 @@ int main(){
         rx_frame.from_sdr_buf.begin()+pr_begin-rx_frame.t2sin.size+rx_frame.output_size, 
         rx_frame.buf.begin());
     
-    auto freq_shift = rx_frame.message_with_preamble.pilot_freq_sinh();
+    auto freq_shift = rx_frame.preamble.pilot_freq_sinh();
     rx_frame.message_with_preamble.freq_shift(freq_shift);
     rx_frame.message_with_preamble.cp_freq_sinh();
     rx_frame.message_with_preamble.pr_phase_sinh(rx_frame.preamble.ofdm_preamble.data(), rx_frame.preamble.size);
