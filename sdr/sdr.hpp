@@ -153,9 +153,12 @@ public:
 
         scan_ctx = iio_create_scan_context("usb", 0);
         ssize_t ret =  iio_scan_context_get_info_list(scan_ctx, &info);
-
         strcpy(uri,iio_context_info_get_uri(info[device_num]));
         sdr_ctx = iio_create_context_from_uri(uri);
+
+
+        // strcpy(uri,iio_context_info_get_uri(info[device_num]));
+        // sdr_ctx = iio_create_context_from_uri(uri);
 
         iio_context_info_list_free(info);
         iio_scan_context_destroy(scan_ctx);
@@ -186,6 +189,10 @@ public:
 
         get_ad9361_stream_ch(RX, rx_sdr, 0, &rx0_i);
         get_ad9361_stream_ch(RX, rx_sdr, 1, &rx0_q);
+
+        iio_channel_attr_write(rx0_i, "usb_ethernet_mode", "ncm");
+        iio_channel_attr_write(rx0_q, "usb_ethernet_mode", "ncm");
+
 
         iio_channel_enable(rx0_i);
         iio_channel_enable(rx0_q);
@@ -248,18 +255,21 @@ void recv(std::complex<int16_t>* buf) {
     char *p_dat, *p_end;
     ptrdiff_t p_inc;
 
-
-    p_dat = (char *) iio_buffer_start(rxbuf);
-    p_end = (char *) iio_buffer_end(rxbuf);
-    p_inc = iio_buffer_step(rxbuf);
-
-    size_t i = 0;
-    while (p_dat < p_end && i < rx_buf_size) {
-        buf[i] = std::complex<int16_t>(((int16_t*)p_dat)[0], ((int16_t*)p_dat)[1]);
-
-        p_dat += p_inc;
-        i++;
+    std::complex<int16_t>* buf_ptr = (std::complex<int16_t>*)iio_buffer_start(rxbuf);
+    for (int i = 0 ; i < rx_buf_size; ++i){
+        buf[i] = buf_ptr[i];
     }
+    // size_t i = 0;
+    // p_dat = (char *) iio_buffer_start(rxbuf);
+    // p_end = (char *) iio_buffer_end(rxbuf);
+    // p_inc = iio_buffer_step(rxbuf);
+
+    // while (p_dat < p_end && i < rx_buf_size) {
+    //     buf[i] = std::complex<int16_t>(((int16_t*)p_dat)[0], ((int16_t*)p_dat)[1]);
+
+    //     p_dat += p_inc;
+    //     i++;
+    // }
 }
     
 

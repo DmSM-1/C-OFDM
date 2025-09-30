@@ -13,18 +13,20 @@ pr_level        = 500
 T2sin_size      = 256
 T2_sin_f1       = 17
 T2_sin_f2       = 51
-T2_sin_level    = 500
+T2_sin_level    = 800
 smooth          = 5
 
-modType         = 2
+modType         = 1
 
 pilot_ampl      = 2500
 
 bw_hz           = 10000000
-fs_hz           = 5000000
+fs_hz           = 10000000
 lo_hz           = 2400000000
 hardwaregain    = 50
-mult            = 100
+mult            = 200
 rx_buf_size     = 40
 tx_cycle_buf    = 0
-tx_time_int     = 500
+tx_time_int     = 0
+
+iterations      = 10000
