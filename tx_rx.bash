@@ -1,5 +1,5 @@
 #!/bin/bash
-
+rm -f LOG.txt
 # 1. Запускаем tx в фоне
 ./tx &
 

@@ -42,27 +42,34 @@
 #define PRINT_LOG_VAL(str, val) ;
 #endif
 
+#define NUM_BUF 16
+
 
 static struct timespec ts[16];
 
-std::complex<int16_t>* buf[2];
+std::complex<int16_t>* buf[NUM_BUF];
 
 
 FRAME_FORM rx_frame("config/config.txt");
 MAC mac(1, 0, rx_frame.usefull_size);
 SDR rx_sdr(1, rx_frame.output_size, "config/config.txt");
 
+
 sem_t sdr_sem[2];
 pthread_t sdr_thread;
 
+int sdr_iter = 0;
+
 void* srd_reader(void* argv){
     int sdr_buf_num = 0;
-    for(int i = 0; i < 1000; ++i){
+    for(; sdr_iter < 1000; ++sdr_iter){
         sem_wait(sdr_sem);
-        rx_sdr.recv(buf[sdr_buf_num%2]);
+        rx_sdr.recv(buf[sdr_buf_num%NUM_BUF]);
         sem_post(sdr_sem+1);
         sdr_buf_num++;
     }
+
+    return NULL;
 }
 
 
@@ -81,7 +88,7 @@ void buf_update(){
     TIME_TRACE_POINT(6);
         memcpy(
             rx_frame.from_sdr_int16_buf.data()+rx_frame.output_size, 
-            buf[buf_num%2], 
+            buf[buf_num%NUM_BUF], 
             rx_sdr.rx_buf_size*sizeof(std::complex<int16_t>)
         );
         buf_num++;
@@ -93,23 +100,15 @@ void buf_update(){
 
 int main(){
 
-    buf[0] = (std::complex<int16_t>*)malloc(rx_sdr.rx_buf_size*sizeof(std::complex<int16_t>));
-    buf[1] = (std::complex<int16_t>*)malloc(rx_sdr.rx_buf_size*sizeof(std::complex<int16_t>));
+    for (int i = 0; i < NUM_BUF; i++){
+        buf[i] = (std::complex<int16_t>*)malloc(rx_sdr.rx_buf_size*sizeof(std::complex<int16_t>));
+    }
 
     pthread_create(&sdr_thread, NULL, srd_reader, NULL);
 
     sem_post(sdr_sem);
 
-    sem_wait(sdr_sem+1);
-    sem_post(sdr_sem);
-    memcpy(
-        rx_frame.from_sdr_int16_buf.data()+rx_frame.output_size, 
-        buf[buf_num%2], 
-        rx_sdr.rx_buf_size*sizeof(std::complex<int16_t>)
-    );
-    buf_num++;
-
-    rx_frame.form_int16_to_double();
+    buf_update();
 
     int pos = 0;
     int preamble_begin;
@@ -242,11 +241,16 @@ int main(){
         fprintf(log_file, "%s", s.str().c_str());
         fclose(log_file);
     #endif
-    
-    free(buf[0]);
-    free(buf[1]);
 
-    std::cout<<s.str();
+    sdr_iter = 10000;
+    sem_post(sdr_sem);
+    pthread_join(sdr_thread, NULL);
+    sem_destroy(sdr_sem);
+    
+    
+    for (int i = 0; i < NUM_BUF; i++){
+        free(buf[i]);
+    }
 
     return 0;
 }

@@ -248,6 +248,16 @@ void recv(complex16_vector& buf) {
 }
 
 
+void refill(){
+    ssize_t ret = iio_buffer_refill(rxbuf);
+}
+
+
+void* buffer_start(){
+    
+}
+
+
 void recv(std::complex<int16_t>* buf) {
 
     ssize_t ret = iio_buffer_refill(rxbuf);
