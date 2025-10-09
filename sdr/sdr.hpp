@@ -7,18 +7,18 @@
 enum iodev { RX, TX };
 
 #define IIO_ENSURE(expr) { \
-	if (!(expr)) { \
-		(void) fprintf(stderr, "assertion failed (%s:%d)\n", __FILE__, __LINE__); \
-		(void) abort(); \
-	} \
+    if (!(expr)) { \
+        (void) fprintf(stderr, "assertion failed (%s:%d)\n", __FILE__, __LINE__); \
+        (void) abort(); \
+    } \
 }
 
 
 struct stream_cfg {
-	long long bw_hz; // Analog banwidth in Hz
-	long long fs_hz; // Baseband sample rate in Hz
-	long long lo_hz; // Local oscillator frequency in Hz
-	const char* rfport; // Port name
+    long long bw_hz; // Analog banwidth in Hz
+    long long fs_hz; // Baseband sample rate in Hz
+    long long lo_hz; // Local oscillator frequency in Hz
+    const char* rfport; // Port name
 };
 
 
@@ -120,7 +120,7 @@ private:
     {
         struct iio_channel *chn = NULL;
 
-        if (!get_phy_chan(type, chid, &chn)) {	return false; }
+        if (!get_phy_chan(type, chid, &chn)) {  return false; }
         wr_ch_str(chn, "rf_port_select",     cfg->rfport);
         wr_ch_lli(chn, "rf_bandwidth",       cfg->bw_hz);
         wr_ch_lli(chn, "sampling_frequency", cfg->fs_hz);

@@ -55,7 +55,7 @@ MAC mac(1, 0, rx_frame.usefull_size);
 SDR rx_sdr(1, rx_frame.output_size, "config/config.txt");
 
 
-sem_t sdr_sem[2];
+sem_t sdr_sem[NUM_BUF];
 pthread_t sdr_thread;
 
 int sdr_iter = 0;
@@ -114,7 +114,7 @@ int main(){
     int preamble_begin;
     int threshold = rx_frame.from_sdr_buf.size()-rx_frame.output_size;
 
-    FILE* res_file = fopen("Res.wav", "wb");
+    FILE* res_file = fopen("Res", "wb");
 
     timespec_get(ts, TIME_UTC);
     int frame_counter = 0;
@@ -216,7 +216,9 @@ int main(){
         TIME_TRACE_POINT(11);
         PRINT_LOG_TIME("PFC", 11);
 
-        auto res_ofdm = rx_frame.message.Mod.demod(constell);;
+        auto res_ofdm = rx_frame.message.Mod.demod(constell);
+        rx_frame.message.Mod.scrembler(res_ofdm.data(), res_ofdm.size());
+        
         auto res = mac.read(res_ofdm);
         TIME_TRACE_POINT(12);
         PRINT_LOG_TIME("MAC", 12);
@@ -254,5 +256,3 @@ int main(){
 
     return 0;
 }
-
-

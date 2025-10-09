@@ -16,7 +16,7 @@ T2_sin_f2       = 51
 T2_sin_level    = 800
 smooth          = 5
 
-modType         = 2
+modType         = 4
 
 pilot_ampl      = 2500
 
@@ -25,7 +25,7 @@ fs_hz           = 5000000
 lo_hz           = 2800000000
 hardwaregain    = 50
 mult            = 100
-rx_buf_size     = 540
+rx_buf_size     = 40
 tx_cycle_buf    = 0
 tx_time_int     = 0
 

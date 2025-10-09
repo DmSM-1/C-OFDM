@@ -27,11 +27,12 @@ int main(){
     SDR tx_sdr(0, tx_frame.output_size, "config/config.txt");
 
     bit_vector origin_mes(mac.payload);
-    FILE* file = fopen("FlyMeToTheMoon_mono.wav", "rb");
+    FILE* file = fopen("Rammstein-Radio.wav", "rb");
     
     while (fread(origin_mes.data(), 1, origin_mes.size(), file)){    
 
         auto tx_mac_frame = mac.write(origin_mes, 0);
+        tx_frame.message.Mod.scrembler(tx_mac_frame.data(), tx_mac_frame.size());
         rx_frame.write(tx_mac_frame);
         auto mod_data = rx_frame.get();
         auto tx_data = rx_frame.get_int16();  

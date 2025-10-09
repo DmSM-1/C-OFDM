@@ -6,6 +6,7 @@
 #include <utility>
 #include <algorithm>
 #include <immintrin.h>
+#include <random>
 
 
 enum mod_type {
@@ -43,5 +44,16 @@ class Modulation{
         complex_vector mod(std::vector<uint8_t>& bin_input);
         std::vector<uint8_t> demod(complex_vector& input);
         std::vector<uint8_t> bit_stream_converter(size_t output_block_size, size_t input_block_size, std::vector<uint8_t>& input);
+
+        void scrembler(uint8_t* data, size_t data_len){
+            std::random_device rd;
+            std::mt19937 gen(42);
+            std::uniform_int_distribution<> dis(0, 255);
+
+            for (int i = 0; i < data_len; ++i){
+                data[i] ^= dis(gen);
+            }
+        }
+
 
 };

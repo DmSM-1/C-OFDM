@@ -18,6 +18,7 @@
 #include "mac/mac_frame.hpp"
 
 
+
 int main(){
     
     FRAME_FORM tx_frame("config/config.txt");
@@ -30,11 +31,13 @@ int main(){
 
 
     bit_vector origin_mes(mac.payload);
-    FILE* file = fopen("WARANDPEACE.txt", "r");
+    FILE* file = fopen("FlyMeToTheMoon_mono.wav", "r");
     fread(origin_mes.data(), 1, origin_mes.size(), file);
     fclose(file);
 
+
     auto tx_mac_frame = mac.write(origin_mes, 0);
+    tx_frame.message.Mod.scrembler(tx_mac_frame.data(), tx_mac_frame.size());
 
     tx_frame.write(tx_mac_frame);
     
@@ -50,6 +53,7 @@ int main(){
     auto t2_sin_corr = rx_frame.t2sin.corr(rx_frame.from_sdr_buf);
     auto t2_sin_begin = rx_frame.t2sin.find_t2sin(rx_frame.from_sdr_buf, 0);
     
+    rx_frame.preamble.find_corr(rx_frame.from_sdr_buf, t2_sin_begin);
     auto pr_begin = rx_frame.preamble.find_preamble(rx_frame.from_sdr_buf, t2_sin_begin)+1;
 
     std::copy(
@@ -78,6 +82,8 @@ int main(){
     write_complex_to_file("data/constell.bin", constell);
 
     auto res_ofdm = rx_frame.message.Mod.demod(constell);
+
+    rx_frame.message.Mod.scrembler(res_ofdm.data(), res_ofdm.size());
 
     auto res = mac.read(res_ofdm);
 
