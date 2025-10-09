@@ -21,26 +21,42 @@ int main(){
     usleep(200000);
 
     FRAME_FORM tx_frame("config/config.txt");
-    FRAME_FORM rx_frame("config/config.txt");
-
     MAC mac(1, 0, tx_frame.usefull_size);
     SDR tx_sdr(0, tx_frame.output_size, "config/config.txt");
 
     bit_vector origin_mes(mac.payload);
-    FILE* file = fopen("Rammstein-Radio.wav", "rb");
+    int frames = tx_frame.config["frames"];
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, 255);
+
+    FILE * file;
+
+    char filename[64] = {0};
     
-    while (fread(origin_mes.data(), 1, origin_mes.size(), file)){    
+    for (int i = 0; i < frames; i++){
+
+        for (auto &i : origin_mes)
+            i = dis(gen);
+
+        for (auto &i : origin_mes)
+            i = dis(gen);
 
         auto tx_mac_frame = mac.write(origin_mes, 0);
+
+        sprintf(filename, "frames/tx_mac_frame_%d", i);
+        file = fopen(filename, "w");
+        fprintf(file, (char*)tx_mac_frame.data(), tx_mac_frame.size());
+        fclose(file);
+
         tx_frame.message.Mod.scrembler(tx_mac_frame.data(), tx_mac_frame.size());
-        rx_frame.write(tx_mac_frame);
-        auto mod_data = rx_frame.get();
-        auto tx_data = rx_frame.get_int16();  
-        
+        tx_frame.write(tx_mac_frame);
+        auto mod_data = tx_frame.get();
+        auto tx_data = tx_frame.get_int16();  
+            
         tx_sdr.send(tx_data);
     }
-
-    fclose(file);
     
     return 0;
 }

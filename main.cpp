@@ -31,10 +31,13 @@ int main(){
 
 
     bit_vector origin_mes(mac.payload);
-    FILE* file = fopen("FlyMeToTheMoon_mono.wav", "r");
-    fread(origin_mes.data(), 1, origin_mes.size(), file);
-    fclose(file);
 
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, 255);
+
+    for (auto &i : origin_mes)
+        i = dis(gen);
 
     auto tx_mac_frame = mac.write(origin_mes, 0);
     tx_frame.message.Mod.scrembler(tx_mac_frame.data(), tx_mac_frame.size());
@@ -70,10 +73,8 @@ int main(){
     auto chan_char = rx_frame.preamble.chan_char_lq();
     auto constell = rx_frame.message.fft();
     
-    for (int i = 0; i < constell.size(); i++){
+    for (int i = 0; i < constell.size(); i++)
         constell[i] /= chan_char[i%chan_char.size()];
-    }
-    
     
     write_complex_to_file("data/source.bin", tx_frame.int16_buf);
     write_complex_to_file("data/data.bin", rx_frame.from_sdr_buf);
