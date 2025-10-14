@@ -424,11 +424,21 @@ public:
         
         for(int i = 0; i < chan_est.size()/2; i++){
             chan_est[i] = std::exp(complex_double(0, b*i+a));
-        }
-        for(int i = chan_est.size()/2; i < chan_est.size(); i++){
-            chan_est[i] = std::exp(complex_double(0, -b*chan_est.size()/2+(i-chan_est.size()/2)*b+a));
+            // (std::abs(pr[i]/mod_preamble[i]) + std::abs(pr[chan_est.size()-i-1]/mod_preamble[chan_est.size()-i-1]))*0.5;
         }
 
+        for(int i = chan_est.size()/2; i < chan_est.size(); i++){
+            chan_est[i] = std::exp(complex_double(0, -b*chan_est.size()/2+(i-chan_est.size()/2)*b+a));
+            // (std::abs(pr[i]/mod_preamble[i]) + std::abs(pr[chan_est.size()-i-1]/mod_preamble[chan_est.size()-i-1]))*0.5;
+        }
+
+        // for(int i = 0; i < chan_est.size()/2; i++){
+        //     auto num = (std::abs(pr[i]/mod_preamble[i]) + std::abs(pr[chan_est.size()-i-1]/mod_preamble[chan_est.size()-i-1]))*0.5;
+        //     chan_est[i] *= num;
+        //     chan_est[chan_est.size()-i-1] *= num;
+        // }
+
+        
 
         return chan_est;
     }

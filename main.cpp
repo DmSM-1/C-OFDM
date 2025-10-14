@@ -63,6 +63,9 @@ int main(){
         rx_frame.from_sdr_buf.begin()+pr_begin-rx_frame.t2sin.size, 
         rx_frame.from_sdr_buf.begin()+pr_begin-rx_frame.t2sin.size+rx_frame.output_size, 
         rx_frame.buf.begin());
+
+    
+
     
     auto freq_shift = rx_frame.preamble.pilot_freq_sinh();
     rx_frame.message_with_preamble.freq_shift(freq_shift);
@@ -76,6 +79,7 @@ int main(){
     for (int i = 0; i < constell.size(); i++)
         constell[i] /= chan_char[i%chan_char.size()];
     
+    write_complex_to_file("data/buf.bin", rx_frame.buf);    
     write_complex_to_file("data/source.bin", tx_frame.int16_buf);
     write_complex_to_file("data/data.bin", rx_frame.from_sdr_buf);
     write_double_to_file("data/t2_sin_corr.bin", t2_sin_corr);

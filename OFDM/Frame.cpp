@@ -73,7 +73,9 @@ void FFT_FORM::write(complex_vector& input){
 complex_vector& FFT_FORM::read(){
     fftw_execute(forward_plan);
 
-    double phys_pilot_ampl = 0.0;
+    complex_double phys_pilot_ampl = 0.0;
+
+
     for(auto &i : pilot)
         phys_pilot_ampl += std::abs(*i);
     
@@ -83,9 +85,13 @@ complex_vector& FFT_FORM::read(){
         x /= phys_pilot_ampl;
     }
 
+
     auto input_ptr = restored_buf.data();
     for(size_t i = 0; i < pilot.size(); i++, input_ptr+=segment_size){
-        memcpy(input_ptr, segment[i], segment_byte_size);   
+        memcpy(input_ptr, segment[i], segment_byte_size); 
+        for (int j = 0; j < segment_size; j++){
+            input_ptr[j] /= *pilot[i]/std::abs(*pilot[i]);
+        }  
     }
 
     return restored_buf;
