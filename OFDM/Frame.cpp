@@ -86,6 +86,10 @@ complex_vector& FFT_FORM::read(){
     auto input_ptr = restored_buf.data();
     for(size_t i = 0; i < pilot.size(); i++, input_ptr+=segment_size){
         memcpy(input_ptr, segment[i], segment_byte_size);   
+        complex_double coef = (*pilot[i] / *pilot[i%num_pilot_subc]);
+        for (int j = 0; j < segment_size; j++){
+            input_ptr[j] /= coef;
+        }  
     }
 
     return restored_buf;
